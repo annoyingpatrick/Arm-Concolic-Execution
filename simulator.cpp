@@ -413,8 +413,4 @@ int main(int argc, char* argv[]) {
     interpreter.execute(code);
     z3tester();
     return 0;
-    interpreter.execute(code4);
-    interpreter.printRegisters();
-    
-    return 0;
 }
