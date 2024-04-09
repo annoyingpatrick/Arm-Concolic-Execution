@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <regex>
+#include <fstream>
 using namespace std;
 
 std::vector<std::string> split(const std::string &s, char delimiter) {
@@ -73,11 +74,9 @@ public:
         return false;
     }
 }
-    void execute(const std::string& code) {
-        std::istringstream codeStream(code);
-        std::string line;
+    void execute(const vector<string>& code) {
 
-        while (std::getline(codeStream, line)) {
+        for (auto& line : code) {
             // Previous preprocessing here
             if (line.empty()) continue;
 
@@ -360,36 +359,27 @@ private:
     int cmp_valid;
 };
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc > 1) {
+        std::cout << "First argument: " << argv[1] << std::endl;
+    } else {
+        std::cout << "No arguments provided" << std::endl;
+        return 1;
+    }
     ARMInterpreter interpreter;
-
-    std::string code4 =
-    "    .global main\n"
-    "\n"
-    "main:\n"
-    "    push    {ip, lr}\n"
-    "    mov r0, #5      /* First argument */\n"
-    "    str r0, [sp]    /* Store r0 at stack location pointed by sp */\n"
-    "    sub sp, sp, #4  /* Decrement stack pointer by 4 bytes */\n"
-    "    mov r1, #3      /* Second argument */\n"
-    "    add sp, sp, #4  /* Increment stack pointer by 4 bytes */\n"
-    "    ldr r0, [sp]    /* Load r0 from stack location pointed by sp */\n"
-    "    bl  add         /* Call add function */\n"
-    "    pop {ip, lr}\n"
-    "    bx  lr          /* Return from main */\n"
-    "\n"
-    "add:\n"
-    "    push {r0, r1, lr} \n"
-    "    bl  multiply     /* Call multiply function */\n"
-    "    add r0, r0, r1  /* Add the arguments */\n"
-    "    pop {r0, r1, lr} \n"
-    "    bx  lr          /* Return from add */\n"
-    "\n"
-    "multiply:\n"
-    "    mul r0, r0, r1  /* Multiply the arguments */\n"
-    "    bx  lr          /* Return from multiply */\n";
     
-    interpreter.execute(code4);
+    vector<string> code;
+    // get the file name from command line arg
+    // open a file in read mode. and read it line by line.
+
+    ifstream file(argv[1]);
+    string line;
+
+    while (getline(file, line)) {
+        code.push_back(line);
+    }
+    
+    interpreter.execute(code);
     interpreter.printRegisters();
     
     return 0;
