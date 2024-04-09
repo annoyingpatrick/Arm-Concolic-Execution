@@ -1,6 +1,9 @@
 # quick-arm-interpreter
-
-
+Currently Do not support load and sotre from symbol
+```
+make all
+./simulator input.s
+```
 
 
 
