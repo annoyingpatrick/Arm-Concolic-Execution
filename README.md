@@ -1,5 +1,13 @@
 # quick-arm-interpreter
-Currently Do not support load and sotre from symbol
+Gonna be a powerful concolic execution tool against arm assembly.
+
+## Environment setup
+For mac user, add the libz3.dylib path to DYLD_LIBRARY_PATH
+```
+export DYLD_LIBRARY_PATH=/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib:$DYLD_LIBRARY_PATH
+```
+## Quick start
+Modify input.s to be the assembly under simulation
 ```
 make all
 ./simulator input.s
