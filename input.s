@@ -1,5 +1,5 @@
     .global main
-
+    
 main:
     push    {ip, lr}
     mov r0, #5      /* First argument */
