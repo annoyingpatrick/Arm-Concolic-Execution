@@ -1,43 +1,10 @@
-#include <iostream>
-#include <array>
-#include <cstring> // For memset
-#include <sstream>
-#include <regex>
-#include <fstream>
-#include <unordered_set>
-#include <z3++.h>
+
+
+//#include <z3++.h>
 #include "ACE_Engine.h"
 
 using namespace std;
 
-void z3tester() {
-    z3::context c;
-    z3::solver s(c);
-
-    // Define variables
-    z3::expr x = c.int_const("x");
-    z3::expr y = c.int_const("y");
-
-    // Add constraints to the solver
-    s.add(x > 2);
-
-    s.add(y < 10);
-    s.add(x + 2 * y == 7);
-
-    // Attempt to solve the problem
-    auto result = s.check();
-    if (result == z3::sat) {
-        std::cout << "Solution found:\n";
-        z3::model m = s.get_model();
-        std::cout << "x = " << m.eval(x) << "\n";
-        std::cout << "y = " << m.eval(y) << "\n";
-    } else if (result == z3::unsat) {
-        std::cout << "No solution exists.\n";
-    } else {
-        std::cout << "Could not determine if a solution exists.\n";
-    }
-}
-  
 
 /*
 * Helper function
@@ -63,17 +30,8 @@ std::vector<std::string> split(const std::string &s, char delimiter)
 *   Interpreter Class
 *
 */
-class ARMInterpreter
+ACE_Engine::ACE_Engine()
 {
-public:
-
-    /*
-    *   Interpreter Constructor
-    *
-    *   Only works for im
-    */
-    ARMInterpreter()
-    {
         memset(memory.data(), 0, memory.size());
         registers.fill(0);
         // Set the stack pointer to the end of the memory for simplicity
@@ -87,7 +45,7 @@ public:
         CPRS['C'] = 0;
         CPRS['V'] = 0;
         cmp_valid = 0;
-    }
+}
 
 
 

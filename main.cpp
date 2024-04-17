@@ -2,10 +2,11 @@
 // Created by karn on 4/16/24.
 //
 #include "ACE_Engine.h"
+//#include <z3++.h>
 
 
-
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
 
     // Make sure we have program to analyze
     if (argc > 1) {
@@ -25,8 +26,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Create interpreter, and then execute code
-    ACE ace_engine;
-    ace_engine.execute(code);
+    ACE_Engine my_Engine;
+    my_Engine.execute(code);
 
     // random z3 tester
     //z3tester();

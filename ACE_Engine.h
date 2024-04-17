@@ -2,20 +2,19 @@
 // Created by karn on 4/16/24.
 //
 
-#ifndef ACE_H
-#define ACE_H
+#ifndef ACE_ENGINE_H
+#define ACE_ENGINE_H
 
 #include <string>
+#include <cstring>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <array>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <iterator>
-
-
-
 
 /*
 * Instruction Struct
@@ -48,13 +47,18 @@ public:
     void printRegisters() const;
 
 private:
+    // Computing Resources
     std::array<uint8_t, 2048> memory;
     std::array<int, 16> registers;
     std::vector<int> stack;
     int PC;
+
+    // Per Program
     std::vector<Instruction> instructions;
-    std::unordered_map<std::string, int> is_register_symbolic;
-    std::unordered_map<std::string, int> symbol2index;
+
+    // Helper Tools
+    const std::unordered_map<std::string, int> is_register_symbolic;
+    const std::unordered_map<std::string, int> symbol2index;
     const std::unordered_set<std::string> validInstructions;
     std::unordered_map<std::string, int> reg2index;
     std::unordered_map<char, int> CPRS;
@@ -63,4 +67,4 @@ private:
     bool terminated;
 };
 
-#endif //ACE_H
+#endif //ACE_ENGINE_H
