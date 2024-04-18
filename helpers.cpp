@@ -4,15 +4,18 @@
 
 #include "helpers.h"
 
+#define DEBUG
 
 /*
 * Prints out a debugging statement
  */
 void print_debug(const std::string &header, const std::string &message)
 {
+    #ifdef DEBUG
     std::cout << "============================ " << header << " ============================\n";
     std::cout << message;
     std::cout << "\n============================ " << header << " ============================" << std::endl;
+    #endif
 }
 
 /*

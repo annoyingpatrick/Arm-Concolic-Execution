@@ -478,13 +478,12 @@ void ACE_Engine::printRegisters() const
         std::cout << "R" << i << ": " << registers[i] << std::endl;
     }
 }
-
-
+ 
 void ACE_Engine::resetProcState()
 {
     memset(memory.data(), 0, memory.size()); //reset memory
     registers.fill(0); //reset registers
-    registers[13] = memory.size()-1;      // top of' stack (stack pointer points at first item on stack)
+    registers[13] = memory.size();      // top of' stack (stack pointer points at first item on stack)
     registers[14] = -1; // link registes
     PC = 0; // Program counter == R15
     stack.clear();
