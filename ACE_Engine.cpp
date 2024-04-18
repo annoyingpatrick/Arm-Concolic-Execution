@@ -524,6 +524,8 @@ bool ACE_Engine::loadProgram(std::string path)
         };
         if (!tokens.empty() && isInstructionValid(tokens[0]) && tokens[0][0]!='@' && tokens[0][0]!='/')
         {
+            // FIX HERE
+
             // clean the operands
             for (int i = 1; i < tokens.size(); i++)
             {

@@ -1,4 +1,4 @@
-
+@ COMPILER GENERATED
 @ int add(int x, int y)
 @ {
 @   return x+y;
@@ -37,7 +37,7 @@ main:
     str     r3, [r7, #8]
     ldr     r1, [r7, #8]
     ldr     r0, [r7, #12]
-    bl      add(int, int)
+    bl      add
     str     r0, [r7, #4]
     movs    r3, #0
     mov     r0, r3
