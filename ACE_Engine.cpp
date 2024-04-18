@@ -1,15 +1,12 @@
 //#include <z3++.h>
 #include "ACE_Engine.h"
 
-using namespace std;
-
-
 /*
 *   Interpreter Class
 *
 */
 
-const unordered_set<std::string> arith = {"add", "sub", "mul", "div", "lsl", "lsr", "and", "orr", "eor"};
+const std::unordered_set<std::string> arith = {"add", "sub", "mul", "div", "lsl", "lsr", "and", "orr", "eor"};
 
 ACE_Engine::ACE_Engine()
 {
@@ -140,26 +137,26 @@ void ACE_Engine::execute()
     // }
 
     // print the instructions
-    cout << "Instructions" << endl;
+    std::cout << "Instructions" << std::endl;
     int cnt = 0;
     for (auto& instruction : instructions)
     {
-        cout << cnt++ << ": " << instruction.type << " ";
+        std::cout << cnt++ << ": " << instruction.type << " ";
         for (auto& operand : instruction.operands)
         {
-            cout << operand << " ";
+            std::cout << operand << " ";
         }
-        cout << endl;
+        std::cout << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
 
     // print the symbol2index
-    cout << "Symbol to index mapping" << endl;
+    std::cout << "Symbol to index mapping" << std::endl;
     for (auto& [symbol, index] : symbol2index)
     {
-        cout << symbol << " " << index << endl;
+        std::cout << symbol << " " << index << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
 
     /*
      *
@@ -167,14 +164,14 @@ void ACE_Engine::execute()
      *
      *
     */
-    cout << endl;
-    cout << "Executing instructions" << endl;
+    std::cout << std::endl;
+    std::cout << "Executing instructions" << std::endl;
     proc_state.PC = symbol2index["main"];
 
 
     while (proc_state.PC < instructions.size() && proc_state.PC >= 0)
     {
-        cout << "PC: " << proc_state.PC << " ";
+        std::cout << "PC: " << proc_state.PC << " ";
         executeInstruction(instructions[proc_state.PC]);
         if (terminated)
         {
@@ -182,7 +179,7 @@ void ACE_Engine::execute()
             break;
         }
     }
-    cout << endl;
+    std::cout << std::endl;
 }
 
 
@@ -193,7 +190,7 @@ void ACE_Engine::execute()
 */
 void ACE_Engine::executeInstruction(const Instruction& instruction)
 {
-    //cout << "EXECUTING: " << instruction.type << std::endl;
+    //std::cout << "EXECUTING: " << instruction.type << std::endl;
     //std::string x = instruction.operands[1];
     //int g = getOperandValue(x);
     const std::string opcode = instruction.type;
@@ -215,13 +212,11 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
     else if (opcode == "ace")
     {
         //is_register_symbolic[instruction.operands[0]] = 1;
-        return;
     }
     // output a register to std out
     else if (opcode == "out")
     {
-        std::cout << instruction.operands[0] << ": " << proc_state.registers[reg2index[instruction.operands[0]]] <<
-            std::endl;
+        std::cout << "OUT " << instruction.operands[0] << " == value ==> " << proc_state.registers[reg2index[instruction.operands[0]]] << std::endl;
     }
     // Arithmetic operations = {ADD, SUB, MUL, DIV} + {LSL LSR} + {AND, ORR, EOR}
     else if (arith.find(opcode) != arith.end())
@@ -236,65 +231,47 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         if (opcode == "add")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 + op2;
-            cout << "ADD " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "ADD " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "sub")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 - op2;
-            cout << "SUB " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "SUB " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "mul")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 * op2;
-            cout << "MUL " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "MUL " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "div")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 / op2;
-            cout << "DIV " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "DIV " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "orr")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 | op2;
-            cout << "ORR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "ORR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "and")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 & op2;
-            cout << "AND " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "AND " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "eor")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 ^ op2;
-            cout << "EOR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "EOR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "lsl")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 << op2;
-            cout << "LSL " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "LSL " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "lsr")
         {
             proc_state.registers[reg2index[instruction.operands[0]]] = op1 >> op2;
-            cout << "LSR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[
-                    2] <<
-                endl;
+            std::cout << "LSR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
     }
     // Branching = {B, BX, BL, BNE, BEQ, BGE, BLT, BGT, BLE}
@@ -304,14 +281,14 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         {
             // Similar handling for b
             proc_state.PC = symbol2index[instruction.operands[0]];
-            cout << "B " << instruction.operands[0] << endl;
+            std::cout << "B " << instruction.operands[0] << std::endl;
             return;
         }
 
         else if (instruction.type == "bne")
         {
             // Similar handling for bne
-            cout << "BNE " << instruction.operands[0] << endl;
+            std::cout << "BNE " << instruction.operands[0] << std::endl;
             if (cmp_valid && proc_state.CPRS['Z'] == 0)
             {
                 proc_state.PC = symbol2index[instruction.operands[0]];
@@ -321,7 +298,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         else if (instruction.type == "beq")
         {
             // Similar handling for beq
-            cout << "BEQ " << instruction.operands[0] << endl;
+            std::cout << "BEQ " << instruction.operands[0] << std::endl;
             if (cmp_valid && proc_state.CPRS['Z'] == 1)
             {
                 proc_state.PC = symbol2index[instruction.operands[0]];
@@ -331,7 +308,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         else if (instruction.type == "bge")
         {
             // Similar handling for bge
-            cout << "BGE " << instruction.operands[0] << endl;
+            std::cout << "BGE " << instruction.operands[0] << std::endl;
             if (cmp_valid && proc_state.CPRS['Z'] == 0 && proc_state.CPRS['N'] == proc_state.CPRS['V'])
             {
                 proc_state.PC = symbol2index[instruction.operands[0]];
@@ -341,7 +318,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         else if (instruction.type == "blt")
         {
             // Similar handling for blt
-            cout << "BLT " << instruction.operands[0] << endl;
+            std::cout << "BLT " << instruction.operands[0] << std::endl;
             if (cmp_valid && proc_state.CPRS['N'] != proc_state.CPRS['V'])
             {
                 proc_state.PC = symbol2index[instruction.operands[0]];
@@ -351,7 +328,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         else if (instruction.type == "bgt")
         {
             // Similar handling for bgt
-            cout << "BGT " << instruction.operands[0] << endl;
+            std::cout << "BGT " << instruction.operands[0] << std::endl;
             if (cmp_valid && proc_state.CPRS['Z'] == 0 && proc_state.CPRS['N'] == proc_state.CPRS['V'])
             {
                 proc_state.PC = symbol2index[instruction.operands[0]];
@@ -361,7 +338,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         else if (instruction.type == "ble")
         {
             // Similar handling for ble
-            cout << "BLE " << instruction.operands[0] << endl;
+            std::cout << "BLE " << instruction.operands[0] << std::endl;
             if (cmp_valid && proc_state.CPRS['Z'] == 1 && proc_state.CPRS['N'] != proc_state.CPRS['V'])
             {
                 proc_state.PC = symbol2index[instruction.operands[0]];
@@ -370,7 +347,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         }
         else if (instruction.type == "bx")
         {
-            cout << "BX " << instruction.operands[0] << endl;
+            std::cout << "BX " << instruction.operands[0] << std::endl;
             // simply set the PC to the value in the lr register
             proc_state.PC = proc_state.registers[14];
             return;
@@ -378,7 +355,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         else if (instruction.type == "bl")
         {
             // Similar handling for bl
-            cout << "BL " << instruction.operands[0] << endl;
+            std::cout << "BL " << instruction.operands[0] << std::endl;
             proc_state.registers[14] = proc_state.PC + 1;
             proc_state.PC = symbol2index[instruction.operands[0]];
             return;
@@ -397,18 +374,18 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
             val = proc_state.registers[reg2index[instruction.operands[1]]];
         }
         proc_state.registers[reg2index[instruction.operands[0]]] = val;
-        cout << "MOV " << instruction.operands[0] << " " << instruction.operands[1] << endl;
+        std::cout << "MOV " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
     }
     // Stack = {PUSH, POP}
     else if (instruction.type == "push")
     {
         // Similar handling for push
-        cout << "PUSH ";
+        std::cout << "PUSH ";
         for (int i = 0; i < instruction.operands.size(); i++)
         {
-            cout << instruction.operands[i] << " ";
+            std::cout << instruction.operands[i] << " ";
         }
-        cout << endl;
+        std::cout << std::endl;
 
         for (auto& operand : instruction.operands)
         {
@@ -420,12 +397,12 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
     else if (instruction.type == "pop")
     {
         // Similar handling for pop
-        cout << "POP ";
+        std::cout << "POP ";
         for (int i = 0; i < instruction.operands.size(); i++)
         {
-            cout << instruction.operands[i] << " ";
+            std::cout << instruction.operands[i] << " ";
         }
-        cout << endl;
+        std::cout << std::endl;
         // pop from the stack, the top of the stack is the last element
         for (int i = instruction.operands.size() - 1; i >= 0; i--)
         {
@@ -453,13 +430,13 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         proc_state.CPRS['Z'] = (op1 - op2) == 0;
         proc_state.CPRS['C'] = op1 >= op2;
         proc_state.CPRS['V'] = (op1 < 0 && op2 >= 0 && (op1 - op2) >= 0) || (op1 >= 0 && op2 < 0 && (op1 - op2) < 0);
-        cout << "CMP " << instruction.operands[0] << " " << instruction.operands[1] << endl;
+        std::cout << "CMP " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
     }
     // Load and store = {LDR, STR}
     else if (instruction.type == "ldr")
     {
         // Similar handling for ldr
-        cout << "LDR " << instruction.operands[0] << " " << instruction.operands[1] << endl;
+        std::cout << "LDR " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
         int address = (instruction.operands[1][0] == '#')
                           ? std::stoi(instruction.operands[1].substr(1))
                           : proc_state.registers[reg2index[instruction.operands[1]]];
@@ -472,7 +449,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
     else if (instruction.type == "str")
     {
         // Similar handling for str
-        cout << "STR " << instruction.operands[0] << " " << instruction.operands[1] << endl;
+        std::cout << "STR " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
         int address = (instruction.operands[1][0] == '#')
                           ? std::stoi(instruction.operands[1].substr(1))
                           : proc_state.registers[reg2index[instruction.operands[1]]];
@@ -485,7 +462,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
     }
     else
     {
-        cout << "Unknown instruction" << endl;
+        std::cout << "Unknown instruction" << std::endl;
     }
     //Add other instructions as needed
     proc_state.PC++;
@@ -542,7 +519,7 @@ bool ACE_Engine::loadProgram(std::string path)
             std::istream_iterator<std::string>{iss},
             std::istream_iterator<std::string>{}
         };
-        if (!tokens.empty() && isInstructionValid(tokens[0]))
+        if (!tokens.empty() && isInstructionValid(tokens[0]) && tokens[0][0]!='@' && tokens[0][0]!='/')
         {
             // clean the operands
             for (int i = 1; i < tokens.size(); i++)
@@ -559,6 +536,8 @@ bool ACE_Engine::loadProgram(std::string path)
             instructions.push_back({tokens[0], std::vector<std::string>(tokens.begin() + 1, tokens.end())});
         }
     }
+
+    return true;
 }
 
 

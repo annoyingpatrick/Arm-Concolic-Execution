@@ -2,7 +2,8 @@
 // Created by karn on 4/17/2024.
 //
 
-//#include <z3++.h>
+#include <z3++.h>
+#include <iostream>
 
 void z3tester()
 {

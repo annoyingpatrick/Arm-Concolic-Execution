@@ -29,10 +29,16 @@ int main(int argc, char* argv[])
     // }
 
     // Create interpreter, and then execute code
+    print_debug("", "myengine");
     ACE_Engine myEngine;
-    if (!myEngine.loadProgram(argv[1]))
+    print_debug("","loading");
+    if (!myEngine.loadProgram(argv[1])) {
+
         return -1;
+    }
+    print_debug("", "executing");
     myEngine.execute();
+    print_debug("", "returning");
 
     // random z3 tester
     //z3tester();
