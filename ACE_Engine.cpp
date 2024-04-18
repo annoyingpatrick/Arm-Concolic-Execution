@@ -387,11 +387,13 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         }
         std::cout << std::endl;
 
+        // decrement then push onto the stack.
         for (auto& operand : instruction.operands)
         {
+            registers[13] -= 4;
             stack.push_back(registers[reg2index[operand]]);
             // decrease the stack pointer, but we are not actually pushing the values to the stack
-            registers[13] -= 4;
+            
         }
     }
     else if (instruction.type == "pop")
@@ -403,7 +405,8 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
             std::cout << instruction.operands[i] << " ";
         }
         std::cout << std::endl;
-        // pop from the stack, the top of the stack is the last element
+
+        // pop from the stack then increment stack pointer
         for (int i = instruction.operands.size() - 1; i >= 0; i--)
         {
             registers[reg2index[instruction.operands[i]]] = stack.back();
@@ -481,7 +484,7 @@ void ACE_Engine::resetProcState()
 {
     memset(memory.data(), 0, memory.size()); //reset memory
     registers.fill(0); //reset registers
-    registers[13] = memory.size();
+    registers[13] = memory.size()-1;      // top of' stack (stack pointer points at first item on stack)
     registers[14] = -1; // link registes
     PC = 0; // Program counter == R15
     stack.clear();

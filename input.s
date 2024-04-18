@@ -1,27 +1,46 @@
-    .global main
-    
-main:
-    push    {ip, lr}
-    mov r0, #5      /* First argument */
-    @ str r0, [sp]    /* Store r0 at stack location pointed by sp */
-    @ sub sp, sp, #4  /* Decrement stack pointer by 4 bytes */
-    @ push {r0}
 
-    mov r1, #3      /* Second argument */
-    @add sp, sp, #4  /* Increment stack pointer by 4 bytes */
-    @ ldr r0, [sp]    /* Load r0 from stack location pointed by sp */
-    bl  add         /* Call add function */
-    pop {ip, lr}
-    out r0
-    bx  lr          /* Return from main */
+@ int add(int x, int y)
+@ {
+@   return x+y;
+@ }
+
+@ int main()
+@ {
+@   int x = 5;
+@   int y = 3;
+
+@   int z = add(x, y);
+@ }
+
 
 add:
-    @ push {r0, r1, lr}
-    @ bl  multiply     /* Call multiply function */
-    add r0, r0, r1  /* Add the arguments */
-    @ pop {r0, r1, lr}
-    bx  lr          /* Return from add */
-
-multiply:
-    mul r0, r0, r1  /* Multiply the arguments */
-    bx  lr          /* Return from multiply */
+    push    {r7}
+    sub     sp, sp, #12
+    add     r7, sp, #0
+    str     r0, [r7, #4]
+    str     r1, [r7]
+    ldr     r2, [r7, #4]
+    ldr     r3, [r7]
+    add     r3, r3, r2
+    mov     r0, r3
+    adds    r7, r7, #12
+    mov     sp, r7
+    ldr     r7, [sp], #4
+    bx      lr
+main:
+    push    {r7, lr}
+    sub     sp, sp, #16
+    add     r7, sp, #0
+    movs    r3, #5
+    str     r3, [r7, #12]
+    movs    r3, #3
+    str     r3, [r7, #8]
+    ldr     r1, [r7, #8]
+    ldr     r0, [r7, #12]
+    bl      add(int, int)
+    str     r0, [r7, #4]
+    movs    r3, #0
+    mov     r0, r3
+    adds    r7, r7, #16
+    mov     sp, r7
+    pop     {r7, pc}
