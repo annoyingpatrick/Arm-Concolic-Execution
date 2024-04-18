@@ -12,10 +12,10 @@ LDFLAGS = -L/usr/local/lib -L/Library/Developer/CommandLineTools/Library/Framewo
 LDLIBS = -lz3
 
 # Specify the target
-TARGET = simulator
+TARGET = ACE_ENGINE
 
 # Specify the source file(s)
-SRC = simulator.cpp
+SRC = ACE_Engine.cpp z3temp.cpp helpers.cpp main.cpp
 
 # Default target
 all: $(TARGET)

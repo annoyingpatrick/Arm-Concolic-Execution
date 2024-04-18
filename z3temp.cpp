@@ -4,9 +4,10 @@
 
 //#include <z3++.h>
 
-void z3tester() {
-  z3::context c;
-   z3::solver s(c);
+void z3tester()
+{
+    z3::context c;
+    z3::solver s(c);
 
     // Define variables
     z3::expr x = c.int_const("x");
@@ -20,14 +21,17 @@ void z3tester() {
 
     // Attempt to solve the problem
     auto result = s.check();
-    if (result == z3::sat) {
+    if (result == z3::sat)
+    {
         std::cout << "Solution found:\n";
         z3::model m = s.get_model();
         std::cout << "x = " << m.eval(x) << "\n";
         std::cout << "y = " << m.eval(y) << "\n";
-    } else if (result == z3::unsat) {
+    } else if (result == z3::unsat)
+    {
         std::cout << "No solution exists.\n";
-    } else {
+    } else
+    {
         std::cout << "Could not determine if a solution exists.\n";
     }
 }
