@@ -166,13 +166,13 @@ void ACE_Engine::execute()
     */
     std::cout << std::endl;
     std::cout << "Executing instructions" << std::endl;
-    proc_state.PC = symbol2index["main"];
+    PC = symbol2index["main"];
 
 
-    while (proc_state.PC < instructions.size() && proc_state.PC >= 0)
+    while (PC < instructions.size() && PC >= 0)
     {
-        std::cout << "PC: " << proc_state.PC << " ";
-        executeInstruction(instructions[proc_state.PC]);
+        std::cout << "PC: " << PC << " ";
+        executeInstruction(instructions[PC]);
         if (terminated)
         {
             std::cout << "TERMINATED";
@@ -216,61 +216,61 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
     // output a register to std out
     else if (opcode == "out")
     {
-        std::cout << "OUT " << instruction.operands[0] << " == value ==> " << proc_state.registers[reg2index[instruction.operands[0]]] << std::endl;
+        std::cout << "OUT " << instruction.operands[0] << " == value ==> " << registers[reg2index[instruction.operands[0]]] << std::endl;
     }
     // Arithmetic operations = {ADD, SUB, MUL, DIV} + {LSL LSR} + {AND, ORR, EOR}
     else if (arith.find(opcode) != arith.end())
     {
         int op1 = (instruction.operands[1][0] == '#')
                       ? std::stoi(instruction.operands[1].substr(1))
-                      : proc_state.registers[reg2index[instruction.operands[1]]];
+                      : registers[reg2index[instruction.operands[1]]];
         int op2 = (instruction.operands[2][0] == '#')
                       ? std::stoi(instruction.operands[2].substr(1))
-                      : proc_state.registers[reg2index[instruction.operands[2]]];
+                      : registers[reg2index[instruction.operands[2]]];
 
         if (opcode == "add")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 + op2;
+            registers[reg2index[instruction.operands[0]]] = op1 + op2;
             std::cout << "ADD " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "sub")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 - op2;
+            registers[reg2index[instruction.operands[0]]] = op1 - op2;
             std::cout << "SUB " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "mul")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 * op2;
+            registers[reg2index[instruction.operands[0]]] = op1 * op2;
             std::cout << "MUL " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "div")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 / op2;
+            registers[reg2index[instruction.operands[0]]] = op1 / op2;
             std::cout << "DIV " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "orr")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 | op2;
+            registers[reg2index[instruction.operands[0]]] = op1 | op2;
             std::cout << "ORR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "and")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 & op2;
+            registers[reg2index[instruction.operands[0]]] = op1 & op2;
             std::cout << "AND " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "eor")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 ^ op2;
+            registers[reg2index[instruction.operands[0]]] = op1 ^ op2;
             std::cout << "EOR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "lsl")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 << op2;
+            registers[reg2index[instruction.operands[0]]] = op1 << op2;
             std::cout << "LSL " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
         else if (instruction.type == "lsr")
         {
-            proc_state.registers[reg2index[instruction.operands[0]]] = op1 >> op2;
+            registers[reg2index[instruction.operands[0]]] = op1 >> op2;
             std::cout << "LSR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
         }
     }
@@ -280,7 +280,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         if (opcode == "b")
         {
             // Similar handling for b
-            proc_state.PC = symbol2index[instruction.operands[0]];
+            PC = symbol2index[instruction.operands[0]];
             std::cout << "B " << instruction.operands[0] << std::endl;
             return;
         }
@@ -289,9 +289,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         {
             // Similar handling for bne
             std::cout << "BNE " << instruction.operands[0] << std::endl;
-            if (cmp_valid && proc_state.CPRS['Z'] == 0)
+            if (cmp_valid && CPRS['Z'] == 0)
             {
-                proc_state.PC = symbol2index[instruction.operands[0]];
+                PC = symbol2index[instruction.operands[0]];
                 return;
             }
         }
@@ -299,9 +299,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         {
             // Similar handling for beq
             std::cout << "BEQ " << instruction.operands[0] << std::endl;
-            if (cmp_valid && proc_state.CPRS['Z'] == 1)
+            if (cmp_valid && CPRS['Z'] == 1)
             {
-                proc_state.PC = symbol2index[instruction.operands[0]];
+                PC = symbol2index[instruction.operands[0]];
                 return;
             }
         }
@@ -309,9 +309,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         {
             // Similar handling for bge
             std::cout << "BGE " << instruction.operands[0] << std::endl;
-            if (cmp_valid && proc_state.CPRS['Z'] == 0 && proc_state.CPRS['N'] == proc_state.CPRS['V'])
+            if (cmp_valid && CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
             {
-                proc_state.PC = symbol2index[instruction.operands[0]];
+                PC = symbol2index[instruction.operands[0]];
                 return;
             }
         }
@@ -319,9 +319,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         {
             // Similar handling for blt
             std::cout << "BLT " << instruction.operands[0] << std::endl;
-            if (cmp_valid && proc_state.CPRS['N'] != proc_state.CPRS['V'])
+            if (cmp_valid && CPRS['N'] != CPRS['V'])
             {
-                proc_state.PC = symbol2index[instruction.operands[0]];
+                PC = symbol2index[instruction.operands[0]];
                 return;
             }
         }
@@ -329,9 +329,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         {
             // Similar handling for bgt
             std::cout << "BGT " << instruction.operands[0] << std::endl;
-            if (cmp_valid && proc_state.CPRS['Z'] == 0 && proc_state.CPRS['N'] == proc_state.CPRS['V'])
+            if (cmp_valid && CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
             {
-                proc_state.PC = symbol2index[instruction.operands[0]];
+                PC = symbol2index[instruction.operands[0]];
                 return;
             }
         }
@@ -339,9 +339,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         {
             // Similar handling for ble
             std::cout << "BLE " << instruction.operands[0] << std::endl;
-            if (cmp_valid && proc_state.CPRS['Z'] == 1 && proc_state.CPRS['N'] != proc_state.CPRS['V'])
+            if (cmp_valid && CPRS['Z'] == 1 && CPRS['N'] != CPRS['V'])
             {
-                proc_state.PC = symbol2index[instruction.operands[0]];
+                PC = symbol2index[instruction.operands[0]];
                 return;
             }
         }
@@ -349,15 +349,15 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         {
             std::cout << "BX " << instruction.operands[0] << std::endl;
             // simply set the PC to the value in the lr register
-            proc_state.PC = proc_state.registers[14];
+            PC = registers[14];
             return;
         }
         else if (instruction.type == "bl")
         {
             // Similar handling for bl
             std::cout << "BL " << instruction.operands[0] << std::endl;
-            proc_state.registers[14] = proc_state.PC + 1;
-            proc_state.PC = symbol2index[instruction.operands[0]];
+            registers[14] = PC + 1;
+            PC = symbol2index[instruction.operands[0]];
             return;
         }
     }
@@ -371,9 +371,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         }
         else
         {
-            val = proc_state.registers[reg2index[instruction.operands[1]]];
+            val = registers[reg2index[instruction.operands[1]]];
         }
-        proc_state.registers[reg2index[instruction.operands[0]]] = val;
+        registers[reg2index[instruction.operands[0]]] = val;
         std::cout << "MOV " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
     }
     // Stack = {PUSH, POP}
@@ -389,9 +389,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
 
         for (auto& operand : instruction.operands)
         {
-            proc_state.stack.push_back(proc_state.registers[reg2index[operand]]);
+            stack.push_back(registers[reg2index[operand]]);
             // decrease the stack pointer, but we are not actually pushing the values to the stack
-            proc_state.registers[13] -= 4;
+            registers[13] -= 4;
         }
     }
     else if (instruction.type == "pop")
@@ -406,9 +406,9 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         // pop from the stack, the top of the stack is the last element
         for (int i = instruction.operands.size() - 1; i >= 0; i--)
         {
-            proc_state.registers[reg2index[instruction.operands[i]]] = proc_state.stack.back();
-            proc_state.stack.pop_back();
-            proc_state.registers[13] += 4;
+            registers[reg2index[instruction.operands[i]]] = stack.back();
+            stack.pop_back();
+            registers[13] += 4;
         }
     }
     // Comparison = {CMP}
@@ -417,19 +417,19 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         // Similar handling for cmp
         int op1 = (instruction.operands[0][0] == '#')
                       ? std::stoi(instruction.operands[0].substr(1))
-                      : proc_state.registers[reg2index[instruction.operands[0]]];
+                      : registers[reg2index[instruction.operands[0]]];
         int op2 = (instruction.operands[1][0] == '#')
                       ? std::stoi(instruction.operands[1].substr(1))
-                      : proc_state.registers[reg2index[instruction.operands[1]]];
+                      : registers[reg2index[instruction.operands[1]]];
 
         cmp_op1 = op1;
         cmp_op2 = op2;
         cmp_valid = 1;
         // update CPRS
-        proc_state.CPRS['N'] = (op1 - op2) < 0;
-        proc_state.CPRS['Z'] = (op1 - op2) == 0;
-        proc_state.CPRS['C'] = op1 >= op2;
-        proc_state.CPRS['V'] = (op1 < 0 && op2 >= 0 && (op1 - op2) >= 0) || (op1 >= 0 && op2 < 0 && (op1 - op2) < 0);
+        CPRS['N'] = (op1 - op2) < 0;
+        CPRS['Z'] = (op1 - op2) == 0;
+        CPRS['C'] = op1 >= op2;
+        CPRS['V'] = (op1 < 0 && op2 >= 0 && (op1 - op2) >= 0) || (op1 >= 0 && op2 < 0 && (op1 - op2) < 0);
         std::cout << "CMP " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
     }
     // Load and store = {LDR, STR}
@@ -439,11 +439,11 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         std::cout << "LDR " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
         int address = (instruction.operands[1][0] == '#')
                           ? std::stoi(instruction.operands[1].substr(1))
-                          : proc_state.registers[reg2index[instruction.operands[1]]];
+                          : registers[reg2index[instruction.operands[1]]];
         // read 4 bytes from the memory
-        proc_state.registers[reg2index[instruction.operands[0]]] =
-            (proc_state.memory[address] << 24) | (proc_state.memory[address + 1] << 16) | (proc_state.memory[address +
-                2] << 8) | proc_state.memory[
+        registers[reg2index[instruction.operands[0]]] =
+            (memory[address] << 24) | (memory[address + 1] << 16) | (memory[address +
+                2] << 8) | memory[
                 address + 3];
     }
     else if (instruction.type == "str")
@@ -452,46 +452,46 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         std::cout << "STR " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
         int address = (instruction.operands[1][0] == '#')
                           ? std::stoi(instruction.operands[1].substr(1))
-                          : proc_state.registers[reg2index[instruction.operands[1]]];
+                          : registers[reg2index[instruction.operands[1]]];
         //memory[address] = registers[reg2index[instruction.operands[0]]];
         // store 4 bytes to the memory
-        proc_state.memory[address] = (proc_state.registers[reg2index[instruction.operands[0]]] >> 24) & 0xFF;
-        proc_state.memory[address + 1] = (proc_state.registers[reg2index[instruction.operands[0]]] >> 16) & 0xFF;
-        proc_state.memory[address + 2] = (proc_state.registers[reg2index[instruction.operands[0]]] >> 8) & 0xFF;
-        proc_state.memory[address + 3] = (proc_state.registers[reg2index[instruction.operands[0]]]) & 0xFF;
+        memory[address] = (registers[reg2index[instruction.operands[0]]] >> 24) & 0xFF;
+        memory[address + 1] = (registers[reg2index[instruction.operands[0]]] >> 16) & 0xFF;
+        memory[address + 2] = (registers[reg2index[instruction.operands[0]]] >> 8) & 0xFF;
+        memory[address + 3] = (registers[reg2index[instruction.operands[0]]]) & 0xFF;
     }
     else
     {
         std::cout << "Unknown instruction" << std::endl;
     }
     //Add other instructions as needed
-    proc_state.PC++;
+    PC++;
 }
 
 void ACE_Engine::printRegisters() const
 {
-    for (int i = 0; i < proc_state.registers.size(); ++i)
+    for (int i = 0; i < registers.size(); ++i)
     {
-        std::cout << "R" << i << ": " << proc_state.registers[i] << std::endl;
+        std::cout << "R" << i << ": " << registers[i] << std::endl;
     }
 }
 
 
 void ACE_Engine::resetProcState()
 {
-    memset(proc_state.memory.data(), 0, proc_state.memory.size()); //reset memory
-    proc_state.registers.fill(0); //reset registers
-    proc_state.registers[13] = proc_state.memory.size();
-    proc_state.registers[14] = -1; // link registes
-    proc_state.PC = 0; // Program counter == R15
-    proc_state.stack.clear();
+    memset(memory.data(), 0, memory.size()); //reset memory
+    registers.fill(0); //reset registers
+    registers[13] = memory.size();
+    registers[14] = -1; // link registes
+    PC = 0; // Program counter == R15
+    stack.clear();
     terminated = false;
 
     // Set the condition
-    proc_state.CPRS['N'] = 0; // negative
-    proc_state.CPRS['Z'] = 0; // zero
-    proc_state.CPRS['C'] = 0; // carry
-    proc_state.CPRS['V'] = 0; // overflow
+    CPRS['N'] = 0; // negative
+    CPRS['Z'] = 0; // zero
+    CPRS['C'] = 0; // carry
+    CPRS['V'] = 0; // overflow
     cmp_valid = 0;
 }
 

@@ -48,15 +48,12 @@ public:
 
 private:
     // Computing Resources
-    struct proc_state
-    {
-        std::array<uint8_t, 2048> memory;
-        std::array<int, 16> registers;
-        std::vector<int> stack;
-        std::unordered_map<char, int> CPRS;
+    std::array<uint8_t, 2048> memory;
+    std::array<int, 16> registers;
+    std::vector<int> stack;
+    std::unordered_map<char, int> CPRS;
 
-        int PC;
-    } proc_state;
+    int PC;
 
     // Helper function
     void resetProcState();

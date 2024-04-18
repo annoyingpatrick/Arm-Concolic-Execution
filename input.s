@@ -5,7 +5,7 @@ main:
     mov r0, #5      /* First argument */
     @ str r0, [sp]    /* Store r0 at stack location pointed by sp */
     @ sub sp, sp, #4  /* Decrement stack pointer by 4 bytes */
-    push {r0}
+    @ push {r0}
 
     mov r1, #3      /* Second argument */
     @add sp, sp, #4  /* Increment stack pointer by 4 bytes */
