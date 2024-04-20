@@ -376,6 +376,20 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         registers[reg2index[instruction.operands[0]]] = val;
         std::cout << "MOV " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
     }
+    else if (instruction.type == "mvn")
+    {
+        int val;
+        if (instruction.operands[1][0] == '#')
+        {
+            val = std::stoi(instruction.operands[1].substr(1));
+        }
+        else
+        {
+            val = registers[reg2index[instruction.operands[1]]];
+        }
+        registers[reg2index[instruction.operands[0]]] = ~val;
+        std::cout << "MVN " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
+    }
     // Stack = {PUSH, POP}
     else if (instruction.type == "push")
     {
@@ -449,6 +463,16 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
                 2] << 8) | memory[
                 address + 3];
     }
+    else if (instruction.type == "ldrb")
+    {
+        // Similar handling for ldr
+        std::cout << "LDRB " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
+        int address = (instruction.operands[1][0] == '#')
+                          ? std::stoi(instruction.operands[1].substr(1))
+                          : registers[reg2index[instruction.operands[1]]];
+        // read 4 bytes from the memory
+        registers[reg2index[instruction.operands[0]]] = memory[address] & 0xFF;
+    }
     else if (instruction.type == "str")
     {
         // Similar handling for str
@@ -462,6 +486,17 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         memory[address + 1] = (registers[reg2index[instruction.operands[0]]] >> 16) & 0xFF;
         memory[address + 2] = (registers[reg2index[instruction.operands[0]]] >> 8) & 0xFF;
         memory[address + 3] = (registers[reg2index[instruction.operands[0]]]) & 0xFF;
+    }
+    else if (instruction.type == "strb")
+    {
+        // Similar handling for str
+        std::cout << "STRB " << instruction.operands[0] << " " << instruction.operands[1] << std::endl;
+        int address = (instruction.operands[1][0] == '#')
+                          ? std::stoi(instruction.operands[1].substr(1))
+                          : registers[reg2index[instruction.operands[1]]];
+        //memory[address] = registers[reg2index[instruction.operands[0]]];
+        // store 4 bytes to the memory
+        memory[address] = registers[reg2index[instruction.operands[0]]] & 0xFF;
     }
     else
     {
