@@ -29,6 +29,9 @@ sudo make install
 ## Todo
 ### Support of differrnt indexing mode  
 
+Now support writeback mode
+Example: `str r0, [r1, #4]!` - This stores the word in r0 at the address (r1 + 4), and then adds 4 to r1.
+
 #### Immediate offset / Pre-indexed addressing mode(supported)
 
 In this mode, an immediate offset is added to or subtracted from the base register to form the memory address.

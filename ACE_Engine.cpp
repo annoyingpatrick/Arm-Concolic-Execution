@@ -239,7 +239,10 @@ int ACE_Engine::evaluateOperand(const Operand& Op)
             std::cout << "Error: Invalid operand" << std::endl;
             return -1;
         }
-
+        if (Op.write_back) {
+            // Op.elements[0] has to be a register
+            registers[reg2index[Op.elements[0]]] = val1 + val2;
+        }
         return val1 + val2;
     } else {
        std:: cout << "Error: Invalid operand" << std::endl;
@@ -419,10 +422,7 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         else if (instruction.type == "bl")
         {
             // Similar handling for bl
-            std::cout << "BL " << instruction.operands[0].getString() << std::endl;
             registers[14] = PC + 1;
-            std::cout << instruction.operands[0].getString() << std::endl;
-            std::cout << symbol2index[instruction.operands[0].getString()] << std::endl;
             PC = symbol2index[instruction.operands[0].getString()];
             return;
         }
@@ -621,6 +621,12 @@ bool ACE_Engine::loadProgram(std::string path)
                     op.elements.push_back(tokens[i]);
                     instr.operands.push_back(op);
                     op.elements.clear();
+                    isInBrackets = false;
+                } else if (tokens[i].back() == '!') {
+                    tokens[i] = tokens[i].substr(0, tokens[i].size() - 2); // Remove ']!'
+                    op.elements.push_back(tokens[i]);
+                    op.write_back = true;
+                    instr.operands.push_back(op);
                     isInBrackets = false;
                 } else {
                     op.elements.push_back(tokens[i]);

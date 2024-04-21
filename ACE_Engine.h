@@ -27,6 +27,7 @@ public:
     {
         std::vector<std::string> elements;
         std::string getString() const;
+        bool write_back = false;
     };
     struct Instruction
     {
