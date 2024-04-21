@@ -23,10 +23,17 @@
 class ACE_Engine
 {
 public:
+    struct Operand
+    {
+        std::vector<std::string> elements;
+        std::string getString() const;
+    };
     struct Instruction
     {
         std::string type; // ex MOV
-        std::vector<std::string> operands; // rest operands
+        std::vector<Operand> operands; // rest operands
+        void print() const;
+
         //int opcode; // ex MOV --> 2
         // void clean() {
         //     for (auto& operand : operands) {
@@ -37,12 +44,14 @@ public:
         // }
     };
 
+
     ACE_Engine();
 
     bool loadProgram(std::string path);
 
     bool isInstructionValid(std::string instruction);
     void execute();
+    int evaluateOperand(const Operand& operand);
     void executeInstruction(const Instruction& instruction);
     void printRegisters() const;
 

@@ -26,3 +26,35 @@ cd build
 make
 sudo make install
 ```
+## Todo
+### Support of differrnt indexing mode  
+
+#### Immediate offset / Pre-indexed addressing mode(supported)
+
+In this mode, an immediate offset is added to or subtracted from the base register to form the memory address.
+
+Example: `ldr r0, [r1, #4]` - This loads the word at the address (r1 + 4) into r0.
+
+#### Register offset / Pre-indexed addressing mode(supported)
+
+In this mode, the value of an offset register is added to or subtracted from the base register to form the memory address.
+
+Example: `ldr r0, [r1, r2]` - This loads the word at the address (r1 + r2) into r0.
+
+#### Scaled register offset / Pre-indexed addressing mode
+
+In this mode, the value of an offset register is optionally shifted by a constant amount and then added to or subtracted from the base register to form the memory address.
+
+Example: `ldr r0, [r1, r2, lsl #2]` - This loads the word at the address (r1 + (r2 << 2)) into r0.
+
+#### Post-indexed addressing mode
+
+In this mode, the base register contains the memory address for the current operation. After the operation, an offset is added to or subtracted from the base register.
+
+Example: `ldr r0, [r1], #4` - This loads the word at the address in r1 into r0, and then adds 4 to r1.
+
+#### Post-indexed register offset addressing mode
+
+In this mode, the base register contains the memory address for the current operation. After the operation, the value of an offset register is added to or subtracted from the base register.
+
+Example: `ldr r0, [r1], r2` - This loads the word at the address in r1 into r0, and then adds the value in r2 to r1.
