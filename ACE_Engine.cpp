@@ -95,7 +95,7 @@ bool ACE_Engine::isInstructionValid(std::string instruction)
 void ACE_Engine::concolic(const std::string &output_path)
 {
     terminated = false;
-    concolic = false;
+    isConcolic = false;
     resetProcState();
 
     // print the instructions
@@ -141,7 +141,7 @@ void ACE_Engine::concolic(const std::string &output_path)
             std::cout << "TERMINATED";
             break;
         }
-        if(concolic)
+        if(isConcolic)
         {
             std::cout << "BEGIN CONCOLIC" << std::endl;
             break;
@@ -152,7 +152,7 @@ void ACE_Engine::concolic(const std::string &output_path)
     print("Saving processor state");
     saveProcState();
 
-    // This is teh first iteration, we must give random values for inputs
+    // This is th first iteration, we must give random values for inputs
     
     
 
@@ -568,9 +568,14 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
     }
     else if (opcode == "ace")
     {    
-        // signify inputs
-        // HMMM
-        symbolicRegisterMap[registers[reg2index[instruction.operands[0].getString()]]] = ctx.bv_const(instruction.operands[0].getString().c_str(), 32);
+        // signify inputs 
+        // CAN ONLY SUPPORT r0, r1, r2, r3
+        print("ACEALSKDHLAKS");
+        print(instruction.operands[0].getString());
+        print("ASCECECA");
+        return;
+
+        //inputRegisters[std::stoi(instruction.operands[0].get)] = 1;
 
     }
     else if (opcode == "out")

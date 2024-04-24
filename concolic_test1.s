@@ -30,8 +30,6 @@
 @       111 if x == 100000 && x < z
 @
 
-
-
 test:
     push {lr}
     lsl r2, r1, #1
