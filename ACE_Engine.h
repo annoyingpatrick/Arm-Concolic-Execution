@@ -84,18 +84,19 @@ private:
     long long cmp_op1, cmp_op2;
     int cmp_valid;
     bool terminated;
-    bool concolic;
+    bool isConcolic;
 
     /* Concolic */
     // Symbolic state
-    std::array<z3::expr, 2048> symbolicMemory;            // symbolic memory
-    std::array<z3::expr, 16> symbolicRegister;          // symbolic registers
-    std::unordered_map<char, z3::expr> symbolicCPRS;     // symbolic condition codes
-    std::vector<z3::expr> symbolicStack;                // symbolic stack
+    //std::array<z3::expr, 2048> symbolicMemory;            // symbolic memory
+    //std::array<z3::expr, 16> symbolicRegisters;          // symbolic registers
+    //std::unordered_map<char, z3::expr> symbolicCPRS;     // symbolic condition codes
+    //std::vector<z3::expr> symbolicStack;                // symbolic stack
 
-    std::vector<z3::expr> path_constraints;     //path
-    z3::context ctx;
-    z3::solver solver;
+    int inputRegisters[4];
+    //std::vector<z3::expr> path_constraints;     //path
+    //z3::context ctx;
+    //z3::solver solver;
 
 
 };
