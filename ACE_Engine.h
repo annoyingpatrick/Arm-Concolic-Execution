@@ -15,6 +15,9 @@
 #include <sstream>
 #include <fstream>
 #include <iterator>
+
+#include <z3++.h>
+
 #include "helpers.h"
 
 
@@ -23,19 +26,19 @@
 class ACE_Engine
 {
 public:
+    struct Operand
+    {
+        std::vector<std::string> elements;
+        std::string getString() const;
+        bool write_back = false;
+    };
     struct Instruction
     {
         std::string type; // ex MOV
-        std::vector<std::string> operands; // rest operands
-        //int opcode; // ex MOV --> 2
-        // void clean() {
-        //     for (auto& operand : operands) {
-        //         if (operand[0] == '{') {
-        //             operand = operand.substr(1);
-        //         }
-        //     }
-        // }
+        std::vector<Operand> operands; // rest operands
+        void print() const;
     };
+
 
     ACE_Engine();
 
@@ -43,8 +46,12 @@ public:
 
     bool isInstructionValid(std::string instruction);
     void execute();
+    int evaluateOperand(const Operand& operand);
     void executeInstruction(const Instruction& instruction);
     void printRegisters() const;
+
+    // Concolic
+    void concolic(const std::string &output_path);
 
 private:
     // Computing Resources
@@ -52,11 +59,18 @@ private:
     std::array<int, 16> registers;
     std::vector<int> stack;
     std::unordered_map<char, int> CPRS;
-
     int PC;
+
+    std::array<uint8_t, 2048> old_memory;
+    std::array<int, 16> old_registers;
+    std::vector<int> old_stack;
+    std::unordered_map<char, int> old_CPRS;
+    int old_PC;
 
     // Helper function
     void resetProcState();
+    void saveProcState();
+    void revertProcState();
 
     // Per Program
     std::vector<Instruction> instructions;
@@ -70,6 +84,20 @@ private:
     long long cmp_op1, cmp_op2;
     int cmp_valid;
     bool terminated;
+    bool concolic;
+
+    /* Concolic */
+    // Symbolic state
+    std::array<z3::expr, 2048> symbolicMemory;            // symbolic memory
+    std::array<z3::expr, 16> symbolicRegister;          // symbolic registers
+    std::unordered_map<char, z3::expr> symbolicCPRS;     // symbolic condition codes
+    std::vector<z3::expr> symbolicStack;                // symbolic stack
+
+    std::vector<z3::expr> path_constraints;     //path
+    z3::context ctx;
+    z3::solver solver;
+
+
 };
 
-#endif //ACE_ENGINE_H
+#endif ACE_ENGINE_H
