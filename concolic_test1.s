@@ -1,6 +1,5 @@
 .global main
 
-
 @
 @   int test(int x, int y)
 @   {
@@ -30,6 +29,9 @@
 @       100 if x == 100000 && x >= z
 @       111 if x == 100000 && x < z
 @
+
+
+
 test:
     push {lr}
     lsl r2, r1, #1
@@ -60,13 +62,15 @@ main:
     mov r0, #7
     mov r1, #22
 
-    @ace r0              @ NEW INSTRUCTION
-    @ace r1              @ NEW INSTRUCTION
+    ace r0              @ NEW INSTRUCTION
+    ace r1              @ NEW INSTRUCTION
 
-    out r0              @ NEW INSTRUCTION
-    out r1              @ NEW INSTRUCTION
+    ace_begin           @ NEW INSTRUCTION
 
     bl test
+
+    ace_end             @ NEW INSTRUCTION 
+    
     out r0              @ NEW INSTRUCTION
 
     pop {ip, lr}
