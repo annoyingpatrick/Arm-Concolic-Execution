@@ -18,6 +18,11 @@ void print_debug(const std::string &header, const std::string &message)
     #endif
 }
 
+void print(const std::string &message)
+{
+    std::cout << message << std::endl;
+}
+
 /*
 * Helper function
 *

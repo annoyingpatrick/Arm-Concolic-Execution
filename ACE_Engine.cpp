@@ -1,4 +1,3 @@
-//#include <z3++.h>
 #include "ACE_Engine.h"
 
 /*
@@ -38,7 +37,7 @@ ACE_Engine::ACE_Engine()
         "lsl", "lsr", "cmp", "bne", "beq", "bge",
         "blt", "bgt", "ble", "b", "ldr", "str",
         "ldrb", "strb", "mvn",
-        "ace", "err", "out"
+        "ace", "err", "out", "ace_begin", "ace_end"
     };
 }
 
@@ -60,11 +59,7 @@ bool ACE_Engine::isInstructionValid(std::string instruction)
     if (validInstructions.find(type) != validInstructions.end())
         return true;
 
-    // if (type == "mov" || type == "add" || type == "bl" || type == "bx" || type == "push" || type == "pop" || type == "sub" || type == "mul" || type == "div" || type == "orr" || type == "and" || type == "eor" || type == "lsl" || type == "lsr" || type == "cmp" || type == "bne" || type == "beq" || type == "bge" || type == "blt" || type == "bgt" || type == "ble" || type == "b" || type == "ldr" || type == "str")
-    // {
-    //     // These are valid instructions
-    //     return true;
-    // }
+
     if (type[type.size() - 1] == ':')
     {
         // This is a label
@@ -95,6 +90,94 @@ bool ACE_Engine::isInstructionValid(std::string instruction)
 }
 
 
+
+
+void ACE_Engine::concolic(const std::string &output_path)
+{
+    terminated = false;
+    concolic = false;
+    resetProcState();
+
+    // print the instructions
+    std::cout << "Instructions" << std::endl;
+    int cnt = 0;
+    for (auto& instruction : instructions)
+    {
+        std::cout << cnt++ << ": " << instruction.type << " ";
+        for (auto& operand : instruction.operands)
+        {
+            std::cout << operand.getString() << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    // print the symbol2index
+    std::cout << "Symbol to index mapping" << std::endl;
+    for (auto& [symbol, index] : symbol2index)
+    {
+        std::cout << symbol << " " << index << std::endl;
+    }
+    std::cout << std::endl;
+
+    /*
+     *
+     * Execute parsed instructions
+     *
+     *
+    */
+    std::cout << std::endl;
+    std::cout << "CONCOLIC BEGIN" << std::endl;
+    PC = symbol2index["main"];
+
+    // Iterate up until we get to the place we want to begin concolic
+    std::cout << "Let's get to concolic point..." << std::endl;
+    while (PC < instructions.size() && PC >= 0)
+    {
+        std::cout << "PC: " << PC << " ";
+        executeInstruction(instructions[PC]);
+        if (terminated)
+        {
+            std::cout << "TERMINATED";
+            break;
+        }
+        if(concolic)
+        {
+            std::cout << "BEGIN CONCOLIC" << std::endl;
+            break;
+        }
+    }
+    
+    // Now we are beginning concolic
+    print("Saving processor state");
+    saveProcState();
+
+    // This is teh first iteration, we must give random values for inputs
+    
+    
+
+    
+
+    // signify beginning of concolic execution
+        // we will jump back to this PC+1 during concolic
+
+        // save processor state
+        // save this pc+1
+
+        // Determine what the CONCRETE inputs should be
+
+    // signify end of concolic execution
+
+        // using path constraints, determine next path
+        // determine next concrete input values
+        // revert processor state
+        // set new concrete input values
+
+    std::cout << std::endl;
+}
+
+
+
 /*
 * Execute code file
 *
@@ -105,37 +188,6 @@ void ACE_Engine::execute()
 {
     terminated = false;
     resetProcState();
-
-    // execute each line
-    // for (auto& line : code)
-    // {
-    //     // Previous preprocessing here
-    //     if (line.empty())
-    //         continue;
-    //
-    //     // Parse the instruction and add it to the instructions vector
-    //     std::istringstream iss(line);
-    //     std::vector<std::string> tokens{
-    //         std::istream_iterator<std::string>{iss},
-    //         std::istream_iterator<std::string>{}
-    //     };
-    //     if (!tokens.empty() && isInstructionValid(tokens[0]))
-    //     {
-    //         // clean the operands
-    //         for (int i = 1; i < tokens.size(); i++)
-    //         {
-    //             if (tokens[i].back() == '}' || tokens[i].back() == ',' || tokens[i].back() == ']')
-    //             {
-    //                 tokens[i] = tokens[i].substr(0, tokens[i].size() - 1);
-    //             }
-    //             if (tokens[i][0] == '{' || tokens[i][0] == '[')
-    //             {
-    //                 tokens[i] = tokens[i].substr(1);
-    //             }
-    //         }
-    //         instructions.push_back({tokens[0], std::vector<std::string>(tokens.begin() + 1, tokens.end())});
-    //     }
-    // }
 
     // print the instructions
     std::cout << "Instructions" << std::endl;
@@ -277,33 +329,14 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
     const std::string opcode = instruction.type;
 
 
-    /*
-     *
-     * Special operations = {ERR, ACE, OUT}
-     *
-    */
-    // terminate instruction
-    if (opcode == "err")
-    {
-        /*  Terminate */
-        terminated = true;
-        return;
-    }
-    // make register symbolic
-    else if (opcode == "ace")
-    {
-        //is_register_symbolic[instruction.operands[0]] = 1;
-    }
-    // output a register to std out
-    else if (opcode == "out")
-    {
-        std::cout << "OUT " << instruction.operands[0].getString() << " == value ==> " << registers[reg2index[instruction.operands[0].getString()]] << std::endl;
-    }
-    // Arithmetic operations = {ADD, SUB, MUL, DIV} + {LSL LSR} + {AND, ORR, EOR}
-    else if (arith.find(opcode) != arith.end())
+    if (arith.find(opcode) != arith.end())
     {
         int op1 = evaluateOperand(instruction.operands[1]);
+        // TODO
+
         int op2 = evaluateOperand(instruction.operands[2]);
+        
+        
         instruction.print();
 
         if (opcode == "add")
@@ -527,11 +560,49 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         // store 4 bytes to the memory
         memory[address] = registers[reg2index[instruction.operands[0].getString()]] & 0xFF;
     }
+    else if (opcode == "err")
+    {
+        /*  Terminate */
+        terminated = true;
+        return;
+    }
+    else if (opcode == "ace")
+    {    
+        // signify inputs
+        // HMMM
+        symbolicRegisterMap[registers[reg2index[instruction.operands[0].getString()]]] = ctx.bv_const(instruction.operands[0].getString().c_str(), 32);
+
+    }
+    else if (opcode == "out")
+    {
+        // output a register to std out
+        std::cout << "OUT " << instruction.operands[0].getString() << " == value ==> " << registers[reg2index[instruction.operands[0].getString()]] << std::endl;
+    }
+    else if (opcode == "ace_begin")
+    {
+        // signify beginning of concolic execution
+        // we will jump back to this PC+1 during concolic
+
+        // save processor state
+        // save this pc+1
+
+        // Determine what the CONCRETE inputs should be
+    }
+    else if (opcode == "ace_end")
+    {
+        // signify end of concolic execution
+
+        // using path constraints, determine next path
+        // determine next concrete input values
+        // revert processor state
+        // set new concrete input values
+    }
     else
     {
         std::cout << "Unknown instruction" << std::endl;
     }
-    //Add other instructions as needed
+    
+    // Next sequential instruction
     PC++;
 }
 
@@ -559,6 +630,26 @@ void ACE_Engine::resetProcState()
     CPRS['C'] = 0; // carry
     CPRS['V'] = 0; // overflow
     cmp_valid = 0;
+}
+
+
+// Helper function to save current processor state
+void ACE_Engine::saveProcState() 
+{
+    old_memory = memory;
+    old_registers = registers;
+    old_stack = stack;
+    old_CPRS = CPRS;
+    old_PC = PC;
+}
+
+void ACE_Engine::revertProcState() 
+{
+    memory = old_memory;
+    registers = old_registers;
+    stack = old_stack;
+    CPRS = old_CPRS;
+    PC = old_PC;
 }
 
 bool ACE_Engine::loadProgram(std::string path)
@@ -648,48 +739,3 @@ bool ACE_Engine::loadProgram(std::string path)
     return true;
 }
 
-
-/*
-*   Takes string input (operand), and returns the value it represents
-*
-*/
-/*
-int getOperandValue(std::string &op)
-{
-    std::cout << "GETOP "  << op << "\n";
-
-    // Literal value
-    if(op[0] == '#'){
-        std::cout << op.substr(1);
-        return stoi(op.substr(1));
-
-    }
-
-    // Register value
-    if(op[0] > 'a' && op[0] < 'z')
-    {
-        int x = registers[reg2index[op]];
-        std::cout <<x;
-        return  registers[reg2index[op]];
-    }
-
-    // Addressing modes
-    if(op[0] == '[')
-    {
-        std::vector<std::string> toks = split(op.substr(1, op.length()-2), ',');
-        std::cout << "ADDR : <";
-        for(auto t: toks)
-            std::cout <<"|"<<t<<"|" << " ";
-        std::cout << ">\n";
-
-
-        // register indirect addressing
-        if(toks.size() == 1){
-            return memory[registers[reg2index[toks[0]]]];
-        }
-
-    }
-
-    return -1;
-}
-*/
