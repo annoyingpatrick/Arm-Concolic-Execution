@@ -37,7 +37,7 @@ ACE_Engine::ACE_Engine()
         "sub", "mul", "div", "orr", "and", "eor",
         "lsl", "lsr", "cmp", "bne", "beq", "bge",
         "blt", "bgt", "ble", "b", "ldr", "str",
-        "ldrb", "strb", "mvn",
+        "ldrb", "strb", "ldm", "stm", "mvn",
         "ace", "err", "out"
     };
 }
@@ -506,6 +506,18 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         // read 4 bytes from the memory
         registers[reg2index[instruction.operands[0].getString()]] = memory[address] & 0xFF;
     }
+    else if (instruction.type == "ldm")
+    {
+        instruction.print();
+        int base = evaluateOperand(instruction.operands[0]);
+        for (int i = 1; i < instruction.operands.size(); i++) {
+            registers[reg2index[instruction.operands[i].getString()]] =
+                (memory[base] << 24) | (memory[base + 1] << 16) | (memory[base +
+                    2] << 8) | memory[
+                    base + 3];
+            base += 4;
+        }
+    }
     else if (instruction.type == "str")
     {
         // Similar handling for str
@@ -526,6 +538,19 @@ void ACE_Engine::executeInstruction(const Instruction& instruction)
         //memory[address] = registers[reg2index[instruction.operands[0]]];
         // store 4 bytes to the memory
         memory[address] = registers[reg2index[instruction.operands[0].getString()]] & 0xFF;
+    }
+    else if (instruction.type == "stm")
+    {
+        instruction.print();
+        int base = evaluateOperand(instruction.operands[0]);
+        for (int i = 1; i < instruction.operands.size(); i++) {
+            // TODO: make this a function
+            memory[base] = (registers[reg2index[instruction.operands[i].getString()]] >> 24) & 0xFF;
+            memory[base + 1] = (registers[reg2index[instruction.operands[i].getString()]] >> 16) & 0xFF;
+            memory[base + 2] = (registers[reg2index[instruction.operands[i].getString()]] >> 8) & 0xFF;
+            memory[base + 3] = (registers[reg2index[instruction.operands[i].getString()]]) & 0xFF;
+            base += 4;
+        }
     }
     else
     {
@@ -601,6 +626,18 @@ bool ACE_Engine::loadProgram(std::string path)
                 op.elements.push_back(tokens[i]);
                 instr.operands.push_back(op);
             }
+        } else if (tokens[0] == "ldm" || tokens[0] == "stm") {
+            for (int i = 1; i < tokens.size(); i++) {
+                Operand op;
+                if (tokens[i][0] == '{' || tokens[i][0] == '[') {
+                    tokens[i] = tokens[i].substr(1);
+                }
+                if (tokens[i].back() == '}' || tokens[i].back() == ',' || tokens[i].back() == ']') {
+                    tokens[i] = tokens[i].substr(0, tokens[i].size() - 1);
+                }
+                op.elements.push_back(tokens[i]);
+                instr.operands.push_back(op);
+            }
         } else {// Other instructions
             Operand op;
             bool isInBrackets = false;
@@ -612,8 +649,6 @@ bool ACE_Engine::loadProgram(std::string path)
                     tokens[i] = tokens[i].substr(1);
                     tokens[i] = tokens[i].substr(0, tokens[i].size() - 1);
                     op.elements.push_back(tokens[i]);
-                    instr.operands.push_back(op);
-                    op.elements.clear();
                 } else if (tokens[i][0] == '[') {
                     tokens[i] = tokens[i].substr(1);
                     op.elements.push_back(tokens[i]);
