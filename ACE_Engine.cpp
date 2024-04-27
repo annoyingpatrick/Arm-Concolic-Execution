@@ -612,6 +612,8 @@ bool ACE_Engine::loadProgram(std::string path)
                     tokens[i] = tokens[i].substr(1);
                     tokens[i] = tokens[i].substr(0, tokens[i].size() - 1);
                     op.elements.push_back(tokens[i]);
+                    instr.operands.push_back(op);
+                    op.elements.clear();
                 } else if (tokens[i][0] == '[') {
                     tokens[i] = tokens[i].substr(1);
                     op.elements.push_back(tokens[i]);

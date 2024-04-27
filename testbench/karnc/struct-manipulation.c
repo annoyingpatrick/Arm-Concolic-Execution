@@ -19,7 +19,7 @@ struct myStruct struct_manipulation(struct myStruct s)
 int main()
 {
   struct myStruct sym_s;
-  klee_make_symbolic(&sym_s, sizeof(sym_s), "sym_s");
+  
   struct myStruct ret = struct_manipulation(sym_s);
   if(ret.num == 1)
     ret.flag = 1;
