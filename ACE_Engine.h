@@ -55,12 +55,18 @@ public:
     int evaluateOperand(const Operand& operand);
     void executeInstruction(const Instruction& instruction);
     void printRegisters() const;
+    uint8_t readByte(uint32_t address) const;
+    uint32_t readWord(uint32_t address) const;
+    void writeByte(uint32_t address, uint8_t value);
+    void writeWord(uint32_t address, uint32_t value);
+
+    
+
 
 private:
     // Computing Resources
     std::array<uint8_t, 2048> memory;
     std::array<int, 16> registers;
-    std::vector<int> stack;
     std::unordered_map<char, int> CPRS;
 
     int PC;
