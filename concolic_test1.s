@@ -32,7 +32,7 @@
 
 test:
     push {lr}
-    lsl r2, r1, #1
+    mul r2, r1, #2
     mov r5, #10
     mov r6, #100
     mov r7, #111
@@ -64,12 +64,12 @@ main:
     ace r1              @ NEW INSTRUCTION
 
     ace_begin           @ NEW INSTRUCTION
-
+    
     bl test
-
+    out r0
     ace_end             @ NEW INSTRUCTION 
     
     out r0              @ NEW INSTRUCTION
 
     pop {ip, lr}
-    bx  lr          
+    //bx  lr          

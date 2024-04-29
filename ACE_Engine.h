@@ -51,7 +51,7 @@ public:
     void printRegisters() const;
 
     // Concolic
-    void concolic(const std::string &output_path);
+    void concolic();
 
 private:
     // Computing Resources
@@ -71,6 +71,8 @@ private:
     void resetProcState();
     void saveProcState();
     void revertProcState();
+    
+    int getRegisterNumber(const std::string& reg);
 
     // Per Program
     std::vector<Instruction> instructions;
@@ -82,23 +84,27 @@ private:
     std::unordered_map<std::string, int> reg2index;
 
     long long cmp_op1, cmp_op2;
+    int cmp_op1_r, cmp_op2_r;
+    
     int cmp_valid;
     bool terminated;
     bool isConcolic;
 
-    /* Concolic */
+    /*************** Concolic ***************/
+    z3::context ctx;
+    /* Symbolic structures*/
     // Symbolic state
-    //std::array<z3::expr, 2048> symbolicMemory;            // symbolic memory
-    //std::array<z3::expr, 16> symbolicRegisters;          // symbolic registers
-    //std::unordered_map<char, z3::expr> symbolicCPRS;     // symbolic condition codes
-    //std::vector<z3::expr> symbolicStack;                // symbolic stack
-
-    int inputRegisters[4];
-    //std::vector<z3::expr> path_constraints;     //path
-    //z3::context ctx;
-    //z3::solver solver;
+    z3::expr_vector symbolicMemory;            // symbolic memory
+    z3::expr_vector symbolicRegisters;          // symbolic registers
+    inline z3::expr getSymbolicRegister(const int &reg);
+    void setSymbolicRegister(const int &reg, const z3::expr &expr);
 
 
+    std::vector<int> inputRegisters;                                  // contain the 
+    std::unordered_set<int> coverage;
+    std::vector<int> isRegisterSymbolic;
+    z3::expr_vector path_constraints;   
+    z3::solver solver;                                      // contain
 };
 
 #endif ACE_ENGINE_H
