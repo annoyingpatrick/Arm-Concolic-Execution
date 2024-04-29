@@ -60,16 +60,20 @@ main:
     mov r0, #7
     mov r1, #22
 
+    @ Signify the inputs to the function under test
     ace r0              @ NEW INSTRUCTION
     ace r1              @ NEW INSTRUCTION
 
+    @ Signify beginning of the function under test
     ace_begin           @ NEW INSTRUCTION
     
     bl test
+
+    @ Print result, signify end of function under test
     out r0
     ace_end             @ NEW INSTRUCTION 
     
     out r0              @ NEW INSTRUCTION
 
     pop {ip, lr}
-    //bx  lr          
+    bx  lr          
