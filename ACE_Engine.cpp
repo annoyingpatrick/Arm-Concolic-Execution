@@ -159,6 +159,7 @@ void ACE_Engine::concolic()
         print_header("Iteration " + std::to_string(++iii));
         while (isConcolic)
         {
+            std::cout << "PC: " << PC << "\t";
             coverage.insert(PC);
             executeInstruction(instructions[PC]);
         }
@@ -169,6 +170,7 @@ void ACE_Engine::concolic()
         // path exploration
         // path we took is in path_constraints
         // lets add them to the solver, and negate the last one
+        std::cout << "~~~~~~~~~Z3~~~~~~~~~" << std::endl;
         solver.reset();
         int constraints = path_constraints.size();
         print_message("This run's path constraint was: "+ path_constraints.to_string());
@@ -196,22 +198,24 @@ void ACE_Engine::concolic()
         {
             if(inputRegisters[i])
             {
-                print_message("r" + std::to_string(i) + ": modl eval --> " + m.eval(symbolicRegisters[i]).to_string());
+                print_message("\t\t[DEBUG] r" + std::to_string(i) + ": model eval --> " + m.eval(symbolicRegisters[i]).to_string());
                 //print_message("HMM-->" + symbolicRegisters[i].to_string());
                 if(symbolicRegisters[i].to_string() == m.eval(symbolicRegisters[i]).to_string())
                 {
                     // any value works... we'll pick 0
                     registers[i] = 0;
-                    print_message("we made r"+std::to_string(i) + " --> 0");
+                    print_message("\t\t[DEBUG] We will set r" + std::to_string(i) + " --> 0");
 
                 }
                 else
                 {
                     registers[i] = m.eval(symbolicRegisters[i]).as_int64();
-                    print_message("we made r"+std::to_string(i) + " --> " + std::to_string(registers[i]));
+                    print_message("\t\t[DEBUG] We will set r"+std::to_string(i) + " --> " + std::to_string(registers[i]));
                 }
             }
         }
+        std::cout << "~~~~~~~~~Z3~~~~~~~~~" << std::endl;
+
         print_message("Current coverage = " + std::to_string(coverage.size())+ " lines of code");
         print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
         if(coverage.size() == last_coverage)
@@ -421,31 +425,31 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 * sym_op2;
-                print_message("DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
-                print_message("RESULT : " + result.to_string());
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex,  result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
                 z3::expr result = sym_op1 * sym_op2;
-                print_message("DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
-                print_message("RESULT : " + result.to_string());
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex,  result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -493,7 +497,6 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
 
         else if (instruction.type == "bne")
         {
-            instruction.print();
             // Similar handling for bne
             if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
@@ -501,8 +504,8 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
                 z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
                 z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
                 z3::expr cond = cond_l != cond_r;
-                print_message("CHECKING IF : " + cond_l.to_string() + "!=" + cond_r.to_string());
-                print_message("CHECKING IF : " + cond.to_string());
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond_l.to_string() + "!=" + cond_r.to_string());
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond.to_string());
 
                 if (CPRS['Z'] == 0)
                 {
@@ -547,8 +550,8 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
                 z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
                 z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
                 z3::expr cond = cond_l >= cond_r;
-                print_message("CHECKING IF : " + cond_l.to_string() + "!=" + cond_r.to_string());
-                print_message("CHECKING IF : " + cond.to_string());
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond_l.to_string() + "!=" + cond_r.to_string());
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond.to_string());
 
                 if (cmp_valid && CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
                 {
@@ -618,9 +621,9 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         {
             // we are putting symbolic value in this register
             isRegisterSymbolic[getRegisterNumber(instruction.operands[0].getString())] = 1;
-            print_message("sym " + instruction.operands[1].getString() + "= " + symbolicRegisters[getRegisterNumber(instruction.operands[1].getString())].to_string());
+            print_message("\t\t[DEBUG] sym " + instruction.operands[1].getString() + "= " + symbolicRegisters[getRegisterNumber(instruction.operands[1].getString())].to_string());
             symbolicRegisters[getRegisterNumber(instruction.operands[0].getString())] = symbolicRegisters[getRegisterNumber(instruction.operands[1].getString())];
-            print_message("sym " + instruction.operands[0].getString() + "= " + symbolicRegisters[getRegisterNumber(instruction.operands[0].getString())].to_string());
+            print_message("\t\t[DEBUG] sym " + instruction.operands[0].getString() + "= " + symbolicRegisters[getRegisterNumber(instruction.operands[0].getString())].to_string());
         }
         else
         {
@@ -733,12 +736,13 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
     }
     else if (opcode == "ace")
     {
+        instruction.print();
         // signify inputs
         // CAN ONLY SUPPORT r0, r1, r2, r3
         int reg = std::stoi(instruction.operands[0].getString().substr(1, 1));
-        print_message("concolic input --> " + instruction.operands[0].getString());
+        print_message("\t\t[DEBUG] Concolic input --> " + instruction.operands[0].getString());
         inputRegisters[reg] = 1;
-        print_message("input arr[" + std::to_string(reg) + "] is now 1");
+        //print_message("input arr[" + std::to_string(reg) + "] is now 1");
     }
     else if (opcode == "out")
     {
@@ -750,7 +754,8 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
     }
     else if (opcode == "ace_begin")
     {
-        print_message("start concolic");
+
+        print_message("ace_begin");
         isConcolic = 1;
     }
     else if (opcode == "ace_end")
