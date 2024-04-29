@@ -11,7 +11,9 @@
 #include <iostream>
 
 void print_debug(const std::string& header, const std::string& message);
-void print(const std::string& message);
+void print_message(const std::string& message);
+void print_header(const std::string& message);
+void print_line();
 std::vector<std::string> split(const std::string& s, char delimiter);
 
 #endif //HELPERS_H

@@ -18,7 +18,16 @@ void print_debug(const std::string &header, const std::string &message)
     #endif
 }
 
-void print(const std::string &message)
+void print_header(const std::string &message)
+{
+    std::cout <<"==============================" << message << "==============================" << std::endl;
+}
+void print_line()
+{
+    std::cout <<"===================================" << "===================================" << std::endl;
+}
+
+void print_message(const std::string &message)
 {
     std::cout << message << std::endl;
 }

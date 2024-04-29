@@ -65,5 +65,7 @@
         "unordered_set": "cpp",
         "__functional_base": "cpp",
         "locale": "cpp"
-    }
+    },
+    "workbench.colorTheme": "Gruvbox Dark Soft",
+    "workbench.preferredDarkColorTheme": "GrunBoxTheme"
 }
