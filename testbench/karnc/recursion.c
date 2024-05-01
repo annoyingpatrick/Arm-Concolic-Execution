@@ -8,7 +8,6 @@ int factorial(int n)
 
 int main()
 {
-    int sym_n;
-    klee_make_symbolic(&sym_n, sizeof(sym_n), "sym_n");
+    int sym_n = 5;
     return factorial(sym_n);
 }
