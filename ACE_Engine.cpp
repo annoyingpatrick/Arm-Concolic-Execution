@@ -412,10 +412,76 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
 
         if (opcode == "add")
         {
+            // R <-- R+R
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                // This register will be symbolic (who cares if already symbolic)
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
+                z3::expr result = sym_op1 + sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "+" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = ctx.int_val(op2);
+                z3::expr result = sym_op1 + sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "+" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else
+            {
+                // register no longer becomes symbolic, as we give it a concrete value
+                isRegisterSymbolic[destRegIndex] = 0;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
+            }
+            // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 + op2;
         }
         else if (instruction.type == "sub")
         {
+            // R <-- R-R
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                // This register will be symbolic (who cares if already symbolic)
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
+                z3::expr result = sym_op1 - sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "-" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = ctx.int_val(op2);
+                z3::expr result = sym_op1 - sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "-" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else
+            {
+                // register no longer becomes symbolic, as we give it a concrete value
+                isRegisterSymbolic[destRegIndex] = 0;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
+            }
+            // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 - op2;
         }
         else if (instruction.type == "mul")
@@ -457,30 +523,240 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         }
         else if (instruction.type == "div")
         {
+            // R <-- R/R
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                // This register will be symbolic (who cares if already symbolic)
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
+                z3::expr result = sym_op1 / sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "/" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = ctx.int_val(op2);
+                z3::expr result = sym_op1 / sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "/" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else
+            {
+                // register no longer becomes symbolic, as we give it a concrete value
+                isRegisterSymbolic[destRegIndex] = 0;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
+            }
+            // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 / op2;
-            // std::cout << "DIV " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
-            std::cout << "DIV" << std::endl;
         }
         else if (instruction.type == "orr")
         {
+            // R <-- R|R
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                // This register will be symbolic (who cares if already symbolic)
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
+                z3::expr result = sym_op1 | sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "|" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = ctx.int_val(op2);
+                z3::expr result = sym_op1 | sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "|" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else
+            {
+                // register no longer becomes symbolic, as we give it a concrete value
+                isRegisterSymbolic[destRegIndex] = 0;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
+            }
+            // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 | op2;
-            // std::cout << "ORR " << instruction.operands[0] << " " << instruction.operands[1] << " " << instruction.operands[2] << std::endl;
-            std::cout << "ORR" << std::endl;
         }
         else if (instruction.type == "and")
         {
+            // R <-- R&R
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                // This register will be symbolic (who cares if already symbolic)
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
+                z3::expr result = sym_op1 & sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "&" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = ctx.int_val(op2);
+                z3::expr result = sym_op1 & sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "&" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else
+            {
+                // register no longer becomes symbolic, as we give it a concrete value
+                isRegisterSymbolic[destRegIndex] = 0;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
+            }
+            // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 & op2;
         }
         else if (instruction.type == "eor")
         {
+            // R <-- R^R
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                // This register will be symbolic (who cares if already symbolic)
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
+                z3::expr result = sym_op1 ^ sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "^" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = ctx.int_val(op2);
+                z3::expr result = sym_op1 ^ sym_op2;
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "^" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else
+            {
+                // register no longer becomes symbolic, as we give it a concrete value
+                isRegisterSymbolic[destRegIndex] = 0;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
+            }
+            // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 ^ op2;
         }
         else if (instruction.type == "lsl")
         {
+            // R <-- R<<R
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                // This register will be symbolic (who cares if already symbolic)
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
+                
+                ////////////////////////////////////////////////////////////////////////////
+                z3::expr result = z3::shl(sym_op1, sym_op2);
+                ////////////////////////////////////////////////////////////////////////////
+
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "<<" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = ctx.int_val(op2);
+
+                ///////////////////////////////////////////////
+                z3::expr result = z3::shl(sym_op1, sym_op2);
+                //////////////////////////////////////////////////
+
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "<<" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else
+            {
+                // register no longer becomes symbolic, as we give it a concrete value
+                isRegisterSymbolic[destRegIndex] = 0;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
+            }
+            // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 << op2;
         }
         else if (instruction.type == "lsr")
         {
+            // R <-- R>>R
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                // This register will be symbolic (who cares if already symbolic)
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
+                
+                ////////////////////////////////////////////////////////////////////////////
+                z3::expr result = z3::lsrl(sym_op1, sym_op2);
+                ////////////////////////////////////////////////////////////////////////////
+
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + ">>" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            {
+                isRegisterSymbolic[destRegIndex] = 1;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+
+                z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
+                z3::expr sym_op2 = ctx.int_val(op2);
+
+                ///////////////////////////////////////////////
+                z3::expr result = z3::lshr(sym_op1, sym_op2);
+                //////////////////////////////////////////////////
+
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + ">>" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                symbolicRegisters.set(destRegIndex,  result);
+            }
+            else
+            {
+                // register no longer becomes symbolic, as we give it a concrete value
+                isRegisterSymbolic[destRegIndex] = 0;
+                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
+            }
+            // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 >> op2;
         }
     }
