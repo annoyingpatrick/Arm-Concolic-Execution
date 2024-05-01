@@ -1,10 +1,10 @@
 
 @ handmade program
-
+// fuck
     .global main
 
 add:
-    push {r2}
+    push {r2}   // fuck
     add r2, r0, r1
     mov r0, r2
     pop {r2}
