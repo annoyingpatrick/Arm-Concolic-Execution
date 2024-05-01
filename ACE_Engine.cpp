@@ -992,6 +992,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
     // Register = {MOV}
     else if (instruction.type == "mov")
     {
+        instruction.print();
         int val = evaluateOperand(instruction.operands[1]);
         if (instruction.operands[1].getString()[0] != '#' && isRegisterSymbolic[getRegisterNumber(instruction.operands[1].getString())])
         {
@@ -1008,13 +1009,31 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         }
         // execute concretely
         registers[reg2index[instruction.operands[0].getString()]] = val;
-        instruction.print();
+        
     }
     else if (instruction.type == "mvn")
     {
-        int val = evaluateOperand(instruction.operands[1]);
-        registers[reg2index[instruction.operands[0].getString()]] = ~val;
+        //int val = evaluateOperand(instruction.operands[1]);
+        //registers[reg2index[instruction.operands[0].getString()]] = ~val;
         instruction.print();
+
+        // HRRRRRM
+        int val = evaluateOperand(instruction.operands[1]);
+        if (instruction.operands[1].getString()[0] != '#' && isRegisterSymbolic[getRegisterNumber(instruction.operands[1].getString())])
+        {
+            // we are putting symbolic value in this register
+            isRegisterSymbolic[getRegisterNumber(instruction.operands[0].getString())] = 1;
+            print_message("\t\t[DEBUG] sym " + instruction.operands[1].getString() + "= ~" + symbolicRegisters[getRegisterNumber(instruction.operands[1].getString())].to_string());
+            symbolicRegisters[getRegisterNumber(instruction.operands[0].getString())] = ~symbolicRegisters[getRegisterNumber(instruction.operands[1].getString())];
+            print_message("\t\t[DEBUG] sym " + instruction.operands[0].getString() + "= " + symbolicRegisters[getRegisterNumber(instruction.operands[0].getString())].to_string());
+        }
+        else
+        {
+            // we are putting concrete value in this register
+            isRegisterSymbolic[getRegisterNumber(instruction.operands[0].getString())] = 0;
+        }
+        // execute concretely
+        registers[reg2index[instruction.operands[0].getString()]] = ~val;
     }
     // Stack = {PUSH, POP}
     else if (instruction.type == "push")
