@@ -807,12 +807,37 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         }
         else if (instruction.type == "beq")
         {
-            // Similar handling for beq
-            if (CPRS['Z'] == 1)
-            {
 
-                PC = symbol2index[instruction.operands[0].getString()];
-                return;
+            // Similar handling for beq
+            if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
+            {
+                // Symbolic
+                z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
+                z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
+                z3::expr cond = cond_l == cond_r;
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond_l.to_string() + "==" + cond_r.to_string());
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond.to_string());
+
+                if (CPRS['Z'] == 1)
+                {
+                    // We are taking this path, so conditional held true, add this to path constrsing
+                    path_constraints.push_back(cond);
+                    PC = symbol2index[instruction.operands[0].getString()];
+                    return;
+                }
+                else
+                {
+                    // We are not taking this path, so conditional not held true
+                    path_constraints.push_back(!cond);
+                }
+            }
+            else
+            {
+                if (CPRS['Z'] == 1)
+                {
+                    PC = symbol2index[instruction.operands[0].getString()];
+                    return;
+                }
             }
         }
         else if (instruction.type == "bge")
@@ -850,29 +875,104 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         }
         else if (instruction.type == "blt")
         {
-            // Similar handling for blt
-            if (cmp_valid && CPRS['N'] != CPRS['V'])
+            // yummm blt sandwich
+            if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
-                PC = symbol2index[instruction.operands[0].getString()];
-                return;
+                // Symbolic
+                z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
+                z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
+                z3::expr cond = cond_l < cond_r;
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond_l.to_string() + "<" + cond_r.to_string());
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond.to_string());
+
+                if (CPRS['N'] != CPRS['V'])
+                {
+                    // We are taking this path, so conditional held true, add this to path constrsing
+                    path_constraints.push_back(cond);
+                    PC = symbol2index[instruction.operands[0].getString()];
+                    return;
+                }
+                else
+                {
+                    // We are not taking this path, so conditional not held true
+                    path_constraints.push_back(!cond);
+                }
+            }
+            else
+            {
+                if (CPRS['N'] != CPRS['V'])
+                {
+                    PC = symbol2index[instruction.operands[0].getString()];
+                    return;
+                }
             }
         }
         else if (instruction.type == "bgt")
         {
-            // Similar handling for bgt
-            if (cmp_valid && CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
+            // similar handling for bgt
+            if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
-                PC = symbol2index[instruction.operands[0].getString()];
-                return;
+                // Symbolic
+                z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
+                z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
+                z3::expr cond = cond_l > cond_r;
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond_l.to_string() + ">" + cond_r.to_string());
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond.to_string());
+
+                if (CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
+                {
+                    // We are taking this path, so conditional held true, add this to path constrsing
+                    path_constraints.push_back(cond);
+                    PC = symbol2index[instruction.operands[0].getString()];
+                    return;
+                }
+                else
+                {
+                    // We are not taking this path, so conditional not held true
+                    path_constraints.push_back(!cond);
+                }
+            }
+            else
+            {
+                if (CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
+                {
+                    PC = symbol2index[instruction.operands[0].getString()];
+                    return;
+                }
             }
         }
         else if (instruction.type == "ble")
         {
-            // Similar handling for ble
-            if (cmp_valid && CPRS['Z'] == 1 && CPRS['N'] != CPRS['V'])
+            // similar handling for ble
+            if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
-                PC = symbol2index[instruction.operands[0].getString()];
-                return;
+                // Symbolic
+                z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
+                z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
+                z3::expr cond = cond_l <= cond_r;
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond_l.to_string() + "<=" + cond_r.to_string());
+                print_message("\t\t[DEBUG] CHECKING IF : " + cond.to_string());
+
+                if (CPRS['Z'] == 1 && CPRS['N'] != CPRS['V'])
+                {
+                    // We are taking this path, so conditional held true, add this to path constrsing
+                    path_constraints.push_back(cond);
+                    PC = symbol2index[instruction.operands[0].getString()];
+                    return;
+                }
+                else
+                {
+                    // We are not taking this path, so conditional not held true
+                    path_constraints.push_back(!cond);
+                }
+            }
+            else
+            {
+                if (CPRS['Z'] == 1 && CPRS['N'] != CPRS['V'])
+                {
+                    PC = symbol2index[instruction.operands[0].getString()];
+                    return;
+                }
             }
         }
         else if (instruction.type == "bx")
