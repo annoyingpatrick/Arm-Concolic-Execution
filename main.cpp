@@ -20,16 +20,19 @@ int main(int argc, char* argv[])
 
 
     // Create interpreter, and then execute code
-    print_debug("", "myengine");
     ACE_Engine myEngine;
-    print_debug("loading program",argv[1]);
+    print_header("loading program: " + std::string(argv[1]));
     if (!myEngine.loadProgram(argv[1])) {
 
         return -1;
     }
-    print_debug("", "executing");
-    myEngine.execute();
-    print_debug("", "returning");
+    // print_header("Executing program");
+    // myEngine.execute();
+    // print_header("returning");
+
+    print_header("Concolically Executing program");
+    myEngine.concolic();
+    print_header("returning");
 
     // random z3 tester
     //z3tester();
