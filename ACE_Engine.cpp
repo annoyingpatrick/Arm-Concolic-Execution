@@ -306,8 +306,47 @@ std::string ACE_Engine::Operand::getString() const
 }
 
 /*
- * Evaluate an operand
- */
+* Read a byte from memory
+*/
+
+uint8_t ACE_Engine::readByte(uint32_t address) const
+{
+    return memory[address];
+}
+
+/*
+* Read a word from memory
+*/
+
+uint32_t ACE_Engine::readWord(uint32_t address) const
+{
+    return (memory[address] << 24) | (memory[address + 1] << 16) | (memory[address + 2] << 8) | memory[address + 3];
+}
+
+/*
+* Write a byte to memory
+*/
+
+void ACE_Engine::writeByte(uint32_t address, uint8_t value)
+{
+    memory[address] = value;
+}
+
+/*
+* Write a word to memory
+*/
+
+void ACE_Engine::writeWord(uint32_t address, uint32_t value)
+{
+    memory[address] = (value >> 24) & 0xFF;
+    memory[address + 1] = (value >> 16) & 0xFF;
+    memory[address + 2] = (value >> 8) & 0xFF;
+    memory[address + 3] = value & 0xFF;
+}
+
+/*
+* Evaluate an operand
+*/
 
 int ACE_Engine::evaluateOperand(const Operand &Op)
 {
@@ -1045,8 +1084,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         for (auto &operand : instruction.operands)
         {
             registers[13] -= 4;
-            stack.push_back(registers[reg2index[operand.getString()]]);
-            // decrease the stack pointer, but we are not actually pushing the values to the stack
+            writeWord(registers[13], registers[reg2index[operand.getString()]]);
         }
     }
     else if (instruction.type == "pop")
@@ -1057,8 +1095,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         // pop from the stack then increment stack pointer
         for (int i = instruction.operands.size() - 1; i >= 0; i--)
         {
-            registers[reg2index[instruction.operands[i].getString()]] = stack.back();
-            stack.pop_back();
+            registers[reg2index[instruction.operands[i].getString()]] = readWord(registers[13]);
             registers[13] += 4;
         }
     }
@@ -1091,8 +1128,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         instruction.print();
         int address = evaluateOperand(instruction.operands[1]);
         // read 4 bytes from the memory
-        registers[reg2index[instruction.operands[0].getString()]] =
-            (memory[address] << 24) | (memory[address + 1] << 16) | (memory[address + 2] << 8) | memory[address + 3];
+        registers[reg2index[instruction.operands[0].getString()]] = readWord(address);
     }
     else if (instruction.type == "ldrb")
     {
@@ -1100,28 +1136,42 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         instruction.print();
         int address = evaluateOperand(instruction.operands[1]);
         // read 4 bytes from the memory
-        registers[reg2index[instruction.operands[0].getString()]] = memory[address] & 0xFF;
+        registers[reg2index[instruction.operands[0].getString()]] = readByte(address);
+    }
+    else if (instruction.type == "ldm")
+    {
+        instruction.print();
+        int base = evaluateOperand(instruction.operands[0]);
+        for (int i = 1; i < instruction.operands.size(); i++) {
+            registers[reg2index[instruction.operands[i].getString()]] = readWord(base);
+            base += 4;
+        }
     }
     else if (instruction.type == "str")
     {
         // Similar handling for str
         instruction.print();
         int address = evaluateOperand(instruction.operands[1]);
-        // memory[address] = registers[reg2index[instruction.operands[0]]];
-        //  store 4 bytes to the memory
-        memory[address] = (registers[reg2index[instruction.operands[0].getString()]] >> 24) & 0xFF;
-        memory[address + 1] = (registers[reg2index[instruction.operands[0].getString()]] >> 16) & 0xFF;
-        memory[address + 2] = (registers[reg2index[instruction.operands[0].getString()]] >> 8) & 0xFF;
-        memory[address + 3] = (registers[reg2index[instruction.operands[0].getString()]]) & 0xFF;
+        // store 4 bytes to the memory
+        writeWord(address, registers[reg2index[instruction.operands[0].getString()]]);
     }
     else if (instruction.type == "strb")
     {
         // Similar handling for str
         instruction.print();
         int address = evaluateOperand(instruction.operands[1]);
-        // memory[address] = registers[reg2index[instruction.operands[0]]];
-        //  store 4 bytes to the memory
-        memory[address] = registers[reg2index[instruction.operands[0].getString()]] & 0xFF;
+        //memory[address] = registers[reg2index[instruction.operands[0]]];
+        // store 4 bytes to the memory
+        writeByte(address, registers[reg2index[instruction.operands[0].getString()]] & 0xFF);
+    }
+    else if (instruction.type == "stm")
+    {
+        instruction.print();
+        int base = evaluateOperand(instruction.operands[0]);
+        for (int i = 1; i < instruction.operands.size(); i++) {
+            writeWord(base, registers[reg2index[instruction.operands[i].getString()]]);
+            base += 4;
+        }
     }
     else if (opcode == "err")
     {
@@ -1177,12 +1227,11 @@ void ACE_Engine::printRegisters() const
 
 void ACE_Engine::resetProcState()
 {
-    memset(memory.data(), 0, memory.size()); // reset memory
-    registers.fill(0);                       // reset registers
-    registers[13] = memory.size();           // top of' stack (stack pointer points at first item on stack)
-    registers[14] = -1;                      // link registes
-    PC = 0;                                  // Program counter == R15
-    stack.clear();
+    memset(memory.data(), 0, memory.size()); //reset memory
+    registers.fill(0); //reset registers
+    registers[13] = memory.size();      // top of' stack (stack pointer points at first item on stack)
+    registers[14] = -1; // link registes
+    PC = 0; // Program counter == R15
     terminated = false;
 
     // Set the condition
@@ -1265,9 +1314,20 @@ bool ACE_Engine::loadProgram(std::string path)
                 op.elements.push_back(tokens[i]);
                 instr.operands.push_back(op);
             }
-        }
-        else
-        { // Other instructions
+
+        } else if (tokens[0] == "ldm" || tokens[0] == "stm") {
+            for (int i = 1; i < tokens.size(); i++) {
+                Operand op;
+                if (tokens[i][0] == '{' || tokens[i][0] == '[') {
+                    tokens[i] = tokens[i].substr(1);
+                }
+                if (tokens[i].back() == '}' || tokens[i].back() == ',' || tokens[i].back() == ']') {
+                    tokens[i] = tokens[i].substr(0, tokens[i].size() - 1);
+                }
+                op.elements.push_back(tokens[i]);
+                instr.operands.push_back(op);
+            }
+        } else {// Other instructions
             Operand op;
             bool isInBrackets = false;
             for (int i = 1; i < tokens.size(); ++i)
@@ -1281,9 +1341,9 @@ bool ACE_Engine::loadProgram(std::string path)
                     tokens[i] = tokens[i].substr(1);
                     tokens[i] = tokens[i].substr(0, tokens[i].size() - 1);
                     op.elements.push_back(tokens[i]);
-                }
-                else if (tokens[i][0] == '[')
-                {
+                    instr.operands.push_back(op);
+                    op.elements.clear();
+                } else if (tokens[i][0] == '[') {
                     tokens[i] = tokens[i].substr(1);
                     op.elements.push_back(tokens[i]);
                     isInBrackets = true;
