@@ -2,8 +2,8 @@
 // Created by karn on 4/16/24.
 //
 
-#ifndef ACE_ENGINE_H
-#define ACE_ENGINE_H
+#ifndef ACEE_H
+#define ACEE_H
 
 #include <string>
 #include <cstring>
@@ -21,9 +21,9 @@
 #include "helpers.h"
 
 
-// Declare the ACE_Engine class
+// Declare the ACEE class
 
-class ACE_Engine
+class ACEE
 {
 public:
     struct Operand
@@ -40,13 +40,14 @@ public:
     };
 
 
-    ACE_Engine();
+    ACEE();
+    ~ACEE();
 
     bool loadProgram(std::string path);
 
     bool isInstructionValid(std::string instruction);
     void execute();
-    int evaluateOperand(const Operand& operand);
+    int32_t evaluateOperand(const Operand& operand);
     void executeInstruction(const Instruction& instruction);
     void printRegisters() const;
     uint8_t readByte(uint32_t address) const;
@@ -54,22 +55,27 @@ public:
     void writeByte(uint32_t address, uint8_t value);
     void writeWord(uint32_t address, uint32_t value);
 
-    
+    inline z3::expr lsl(const z3::expr &l, const z3::expr &r);
+    inline z3::expr lsr(const z3::expr &l, const z3::expr &r);
 
 
     // Concolic
     void concolic();
 
 private:
+
+    // program path
+    std::string p_path;
+    std::ofstream logFile;
+
     // Computing Resources
     std::array<uint8_t, 2048> memory;
-    std::array<int, 16> registers;
+    std::array<uint32_t, 16> registers;
     std::unordered_map<char, int> CPRS;
     int PC;
 
     std::array<uint8_t, 2048> old_memory;
-    std::array<int, 16> old_registers;
-    std::vector<int> old_stack;
+    std::array<uint32_t, 16> old_registers;
     std::unordered_map<char, int> old_CPRS;
     int old_PC;
 
@@ -89,7 +95,7 @@ private:
     std::unordered_map<std::string, int> symbol2index;
     std::unordered_map<std::string, int> reg2index;
 
-    long long cmp_op1, cmp_op2;
+    int32_t cmp_op1, cmp_op2;
     int cmp_op1_r, cmp_op2_r;
     
     int cmp_valid;
@@ -98,8 +104,6 @@ private:
 
     /*************** Concolic ***************/
     z3::context ctx;
-    /* Symbolic structures*/
-    // Symbolic state
     z3::expr_vector symbolicMemory;            // symbolic memory
     z3::expr_vector symbolicRegisters;          // symbolic registers
     inline z3::expr getSymbolicRegister(const int &reg);
@@ -111,6 +115,16 @@ private:
     std::vector<int> isRegisterSymbolic;
     z3::expr_vector path_constraints;   
     z3::solver solver;                                      // contain
+
+    // Concolic outputting
+    void logLine(int i);
+    void logTestInput(const std::vector<int>& inputRegisters);
+    void logCoverage(const std::unordered_set<int>& coverage);
+    void logPathConstraintsV(const std::vector<std::string>& constraints);
+    void logPathConstraints(const std::string &constraints);
+
+    std::vector<int> determineCodeUnderTest(int bPC);
+
 };
 
-#endif ACE_ENGINE_H
+#endif

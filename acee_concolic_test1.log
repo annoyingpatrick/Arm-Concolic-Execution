@@ -1,0 +1,42 @@
+====================   Iteration 1   ====================
+Test Input: 
+	r0 = 0
+	r1 = 0
+
+Coverage: 14 lines covered
+Path Constraints: (ast-vector
+  (distinct r0 100000))
+====================   Iteration 2   ====================
+Test Input: 
+	r0 = 100000
+	r1 = 0
+
+Coverage: 18 lines covered
+Path Constraints: (ast-vector
+  (not (distinct r0 100000))
+  (let ((a!1 (- (bv2int (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))) 4294967296)))
+  (let ((a!2 (ite (bvslt (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))
+                         #x00000000)
+                  a!1
+                  (bv2int (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))))))
+    (>= 100000 a!2))))
+====================   Iteration 3   ====================
+Test Input: 
+	r0 = 100000
+	r1 = 522190846
+
+Coverage: 21 lines covered
+Path Constraints: (ast-vector
+  (not (distinct r0 100000))
+  (let ((a!1 (- (bv2int (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))) 4294967296)))
+  (let ((a!2 (ite (bvslt (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))
+                         #x00000000)
+                  a!1
+                  (bv2int (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))))))
+    (not (>= 100000 a!2))))
+  (let ((a!1 (- (bv2int (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))) 4294967296)))
+  (let ((a!2 (ite (bvslt (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))
+                         #x00000000)
+                  a!1
+                  (bv2int (bvshl ((_ int2bv 32) r1) ((_ int2bv 32) 1))))))
+    (not (>= 100000 a!2)))))
