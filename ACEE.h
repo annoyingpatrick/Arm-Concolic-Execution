@@ -114,7 +114,8 @@ private:
     std::vector<int> inputRegisters;                                  // contain the 
     std::unordered_set<int> coverage;
     std::vector<int> isRegisterSymbolic;
-    z3::expr_vector path_constraints;   
+    z3::expr_vector path_constraints; 
+      
     z3::solver solver;                                      // contain
 
     // Concolic outputting
