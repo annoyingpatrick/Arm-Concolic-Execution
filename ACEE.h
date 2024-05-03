@@ -12,6 +12,7 @@
 #include <unordered_set>
 #include <array>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <iterator>
@@ -117,13 +118,21 @@ private:
     z3::solver solver;                                      // contain
 
     // Concolic outputting
+    void logCode();
+    // void logNCode();
     void logLine(int i);
     void logTestInput(const std::vector<int>& inputRegisters);
-    void logCoverage(const std::unordered_set<int>& coverage);
-    void logPathConstraintsV(const std::vector<std::string>& constraints);
-    void logPathConstraints(const std::string &constraints);
+    void logiCoverage(const std::unordered_set<int>& cov, int iterations);
+    void lognCoverage();
 
+    void logPathConstraintsV(const z3::expr_vector & constraints);
+    void logPathConstraints(const std::string &constraints);
+    
     std::vector<int> determineCodeUnderTest(int bPC);
+
+    std::vector<int> test_code;
+    std::vector<std::string> n_test_code;
+    std::vector<std::vector<int>> all_test_cases;
 
 };
 

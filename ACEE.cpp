@@ -7,9 +7,6 @@
 
 const std::unordered_set<std::string> arith = {"add", "sub", "mul", "div", "lsl", "lsr", "and", "orr", "eor"};
 
-
-
-
 ACEE::ACEE() : ctx(), solver(ctx), symbolicMemory(ctx), symbolicRegisters(ctx), path_constraints(ctx)
 {
 
@@ -54,7 +51,7 @@ ACEE::ACEE() : ctx(), solver(ctx), symbolicMemory(ctx), symbolicRegisters(ctx), 
 
 ACEE::~ACEE()
 {
-    if(logFile.is_open())
+    if (logFile.is_open())
         logFile.close();
 }
 
@@ -107,11 +104,26 @@ void ACEE::concolic()
 {
     terminated = false;
     isConcolic = false;
-    //inputRegisters.resize(4, 0);
+    // inputRegisters.resize(4, 0);
     resetProcState();
 
+    // print the instructions
+    print_header("Instructions");
+    int cnt = 0;
+    for (auto &instruction : instructions)
+    {
+        std::cout << cnt++ << ": " << instruction.type << " ";
+        for (auto &operand : instruction.operands)
+        {
+            std::cout << operand.getString() << ", ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+    print_line();
+
     // Iterate up until we get to the place we want to begin concolic
-    std::cout << "Let's execute until we get to concolic point..." << std::endl;
+    std::cout << "\n\nLet's execute until we get to concolic point..." << std::endl;
     PC = symbol2index["main"];
     while (PC < instructions.size() && PC >= 0)
     {
@@ -124,7 +136,7 @@ void ACEE::concolic()
         }
         if (isConcolic)
         {
-            std::cout << "BEGIN CONCOLIC" << std::endl;
+            print_header("Concolic Execution");
             break;
         }
     }
@@ -140,10 +152,15 @@ void ACEE::concolic()
         i.e. symbolicRegisters[0] == "0"   (--> r0)
     */
 
+    print_message("DETERMINING CODE UNDERTEST");
+    test_code = determineCodeUnderTest(PC);
+    logCode();
 
-   std::vector<int> code_under_test = determineCodeUnderTest(PC);
-
-
+    for (auto x : test_code)
+    {
+        std::cout << "\tPC: " << x << "\t";
+        instructions[x].print();
+    }
 
     print_message("We start concolic at PC: " + PC);
     print_message("Saving processor state...");
@@ -153,9 +170,10 @@ void ACEE::concolic()
     symbolicRegisters.resize(16);
 
     // Set up symbolic registers along with random initial concrete values
-    for(int i = 0; i < 4; ++i)
+    for (int i = 0; i < 4; ++i)
     {
-        if(inputRegisters[i]){
+        if (inputRegisters[i])
+        {
             registers[i] = 0;
             isRegisterSymbolic[i] = 1;
             z3::expr temp = ctx.int_const(("r" + std::to_string(i)).c_str());
@@ -168,7 +186,8 @@ void ACEE::concolic()
     print_message("ENTERING MAIN CONCOLIC LOOP");
     // first execution
     do
-    {   
+    {
+        std::unordered_set<int> icov;
         logLine(++iii);
         logTestInput(inputRegisters);
         isConcolic = true;
@@ -176,12 +195,13 @@ void ACEE::concolic()
         while (isConcolic)
         {
             std::cout << "PC: " << PC << "\t";
+            icov.insert(PC);
             coverage.insert(PC);
             executeInstruction(instructions[PC]);
         }
-        print_message("Current coverage = " + std::to_string(coverage.size())+ " lines of code");
-        print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
-        logCoverage(coverage);
+        // print_message("Current coverage = " + std::to_string(icov.size()) + " lines of code");
+        // print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
+        logiCoverage(icov, iii);
         // we may as well go back!
         revertProcState();
 
@@ -191,16 +211,17 @@ void ACEE::concolic()
         std::cout << "~~~~~~~~~Z3~~~~~~~~~" << std::endl;
         solver.reset();
         int constraints = path_constraints.size();
-        print_message("This run's path constraint was: "+ path_constraints.to_string());
-        logPathConstraints(path_constraints.to_string());
+        print_message("This run's path constraint was: " + path_constraints.to_string());
+        logPathConstraintsV(path_constraints);
+        //logPathConstraints(path_constraints.to_string());
         z3::expr last_constraint = !path_constraints.back();
         path_constraints.pop_back();
         path_constraints.push_back(last_constraint);
-        for(int i = 0; i < constraints; ++i)
+        for (int i = 0; i < constraints; ++i)
             solver.add(path_constraints[i]);
 
         print_message("After negating last constrant, we will try to solve for: " + path_constraints.to_string());
-        if(solver.check() == z3::sat)
+        if (solver.check() == z3::sat)
         {
             print_message("We found satisfying condition!");
         }
@@ -212,23 +233,22 @@ void ACEE::concolic()
         // Using satisfying model, lets get next values
         z3::model m = solver.get_model();
         print_message("Model: " + m.to_string());
-        for(int i = 0; i < 4; ++i)
+        for (int i = 0; i < 4; ++i)
         {
-            if(inputRegisters[i])
+            if (inputRegisters[i])
             {
                 print_message("\t\t[DEBUG] r" + std::to_string(i) + ": model eval --> " + m.eval(symbolicRegisters[i]).to_string());
-                //print_message("HMM-->" + symbolicRegisters[i].to_string());
-                if(symbolicRegisters[i].to_string() == m.eval(symbolicRegisters[i]).to_string())
+                // print_message("HMM-->" + symbolicRegisters[i].to_string());
+                if (symbolicRegisters[i].to_string() == m.eval(symbolicRegisters[i]).to_string())
                 {
                     // any value works... we'll pick 0
                     registers[i] = 0;
                     print_message("\t\t[DEBUG] We will set r" + std::to_string(i) + " --> 0");
-
                 }
                 else
                 {
                     registers[i] = m.eval(symbolicRegisters[i]).as_int64();
-                    print_message("\t\t[DEBUG] We will set r"+std::to_string(i) + " --> " + std::to_string(registers[i]));
+                    print_message("\t\t[DEBUG] We will set r" + std::to_string(i) + " --> " + std::to_string(registers[i]));
                 }
             }
         }
@@ -236,15 +256,16 @@ void ACEE::concolic()
 
         // print_message("Current coverage = " + std::to_string(coverage.size())+ " lines of code");
         // print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
-        if(coverage.size() == last_coverage)
+        if (coverage.size() == last_coverage)
         {
             print_message("We made no progress, ending concolic");
             break;
         }
         last_coverage = coverage.size();
-        
-    } while(true);
 
+    } while (true);
+
+    lognCoverage();
 }
 
 /*
@@ -324,8 +345,8 @@ std::string ACEE::Operand::getString() const
 }
 
 /*
-* Read a byte from memory
-*/
+ * Read a byte from memory
+ */
 
 uint8_t ACEE::readByte(uint32_t address) const
 {
@@ -333,8 +354,8 @@ uint8_t ACEE::readByte(uint32_t address) const
 }
 
 /*
-* Read a word from memory
-*/
+ * Read a word from memory
+ */
 
 uint32_t ACEE::readWord(uint32_t address) const
 {
@@ -342,8 +363,8 @@ uint32_t ACEE::readWord(uint32_t address) const
 }
 
 /*
-* Write a byte to memory
-*/
+ * Write a byte to memory
+ */
 
 void ACEE::writeByte(uint32_t address, uint8_t value)
 {
@@ -351,8 +372,8 @@ void ACEE::writeByte(uint32_t address, uint8_t value)
 }
 
 /*
-* Write a word to memory
-*/
+ * Write a word to memory
+ */
 
 void ACEE::writeWord(uint32_t address, uint32_t value)
 {
@@ -363,8 +384,8 @@ void ACEE::writeWord(uint32_t address, uint32_t value)
 }
 
 /*
-* Evaluate an operand
-*/
+ * Evaluate an operand
+ */
 
 int32_t ACEE::evaluateOperand(const Operand &Op)
 {
@@ -474,31 +495,31 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 + sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "+" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
                 z3::expr result = sym_op1 + sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "+" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -511,31 +532,31 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 - sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "-" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
                 z3::expr result = sym_op1 - sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "-" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -548,31 +569,31 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 * sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
                 z3::expr result = sym_op1 * sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -585,31 +606,31 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 / sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "/" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
                 z3::expr result = sym_op1 / sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "/" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -622,31 +643,31 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 | sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "|" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
                 z3::expr result = sym_op1 | sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "|" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -659,31 +680,31 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 & sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "&" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
                 z3::expr result = sym_op1 & sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "&" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -696,31 +717,31 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 ^ sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "^" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
                 z3::expr result = sym_op1 ^ sym_op2;
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "^" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -734,22 +755,22 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
-                
+
                 ////////////////////////////////////////////////////////////////////////////
                 z3::expr result = z3::shl(sym_op1, sym_op2);
                 ////////////////////////////////////////////////////////////////////////////
 
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "<<" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
@@ -760,13 +781,13 @@ void ACEE::executeInstruction(const Instruction &instruction)
 
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "<<" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -780,22 +801,22 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
-                
+
                 ////////////////////////////////////////////////////////////////////////////
                 z3::expr result = z3::lshr(sym_op1, sym_op2);
                 ////////////////////////////////////////////////////////////////////////////
 
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + ">>" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
@@ -806,13 +827,13 @@ void ACEE::executeInstruction(const Instruction &instruction)
 
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + ">>" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
-                symbolicRegisters.set(destRegIndex,  result);
+                symbolicRegisters.set(destRegIndex, result);
             }
             else
             {
                 // register no longer becomes symbolic, as we give it a concrete value
                 isRegisterSymbolic[destRegIndex] = 0;
-                print_message("\t\t[DEBUG] r" +std::to_string(destRegIndex)+ " is now not symbolic");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now not symbolic");
                 // registers[reg2index[instruction.operands[0].getString()]] = op1 * op2;
             }
             // execute concolically
@@ -1069,12 +1090,11 @@ void ACEE::executeInstruction(const Instruction &instruction)
         }
         // execute concretely
         registers[reg2index[instruction.operands[0].getString()]] = val;
-        
     }
     else if (instruction.type == "mvn")
     {
-        //int val = evaluateOperand(instruction.operands[1]);
-        //registers[reg2index[instruction.operands[0].getString()]] = ~val;
+        // int val = evaluateOperand(instruction.operands[1]);
+        // registers[reg2index[instruction.operands[0].getString()]] = ~val;
         instruction.print();
 
         // HRRRRRM
@@ -1130,10 +1150,10 @@ void ACEE::executeInstruction(const Instruction &instruction)
 
         cmp_op1 = op1;
         cmp_op1_r = getRegisterNumber(instruction.operands[0].getString());
-        //print_message("CMP_OP1_R = <" + std::to_string(cmp_op1_r) + ">");
+        // print_message("CMP_OP1_R = <" + std::to_string(cmp_op1_r) + ">");
         cmp_op2 = op2;
         cmp_op2_r = getRegisterNumber(instruction.operands[1].getString());
-        //print_message("CMP_OP2_R = <" + std::to_string(cmp_op2_r) + ">");
+        // print_message("CMP_OP2_R = <" + std::to_string(cmp_op2_r) + ">");
 
         cmp_valid = 1;
         // update CPRS
@@ -1163,7 +1183,8 @@ void ACEE::executeInstruction(const Instruction &instruction)
     {
         instruction.print();
         int base = evaluateOperand(instruction.operands[0]);
-        for (int i = 1; i < instruction.operands.size(); i++) {
+        for (int i = 1; i < instruction.operands.size(); i++)
+        {
             registers[reg2index[instruction.operands[i].getString()]] = readWord(base);
             base += 4;
         }
@@ -1181,15 +1202,16 @@ void ACEE::executeInstruction(const Instruction &instruction)
         // Similar handling for str
         instruction.print();
         int address = evaluateOperand(instruction.operands[1]);
-        //memory[address] = registers[reg2index[instruction.operands[0]]];
-        // store 4 bytes to the memory
+        // memory[address] = registers[reg2index[instruction.operands[0]]];
+        //  store 4 bytes to the memory
         writeByte(address, registers[reg2index[instruction.operands[0].getString()]] & 0xFF);
     }
     else if (instruction.type == "stm")
     {
         instruction.print();
         int base = evaluateOperand(instruction.operands[0]);
-        for (int i = 1; i < instruction.operands.size(); i++) {
+        for (int i = 1; i < instruction.operands.size(); i++)
+        {
             writeWord(base, registers[reg2index[instruction.operands[i].getString()]]);
             base += 4;
         }
@@ -1208,7 +1230,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
         int reg = std::stoi(instruction.operands[0].getString().substr(1, 1));
         print_message("\t\t[DEBUG] Concolic input --> " + instruction.operands[0].getString());
         inputRegisters[reg] = 1;
-        //print_message("input arr[" + std::to_string(reg) + "] is now 1");
+        // print_message("input arr[" + std::to_string(reg) + "] is now 1");
     }
     else if (opcode == "out")
     {
@@ -1248,11 +1270,11 @@ void ACEE::printRegisters() const
 
 void ACEE::resetProcState()
 {
-    memset(memory.data(), 0, memory.size()); //reset memory
-    registers.fill(0); //reset registers
-    registers[13] = memory.size();      // top of' stack (stack pointer points at first item on stack)
-    registers[14] = -1; // link registes
-    PC = 0; // Program counter == R15
+    memset(memory.data(), 0, memory.size()); // reset memory
+    registers.fill(0);                       // reset registers
+    registers[13] = memory.size();           // top of' stack (stack pointer points at first item on stack)
+    registers[14] = -1;                      // link registes
+    PC = 0;                                  // Program counter == R15
     terminated = false;
 
     // Set the condition
@@ -1287,9 +1309,9 @@ bool ACEE::loadProgram(std::string path)
     std::string output_file = "acee_" + path.substr(0, path.find_last_of('.')) + ".log";
 
     logFile.open(output_file, std::ofstream::out | std::ofstream::trunc);
-    //logFile.clear();
+    // logFile.clear();
 
-    if(!logFile.is_open())
+    if (!logFile.is_open())
         std::cerr << "Failed to open log file." << std::endl;
 
     // get the file name from command line arg
@@ -1343,20 +1365,26 @@ bool ACEE::loadProgram(std::string path)
                 op.elements.push_back(tokens[i]);
                 instr.operands.push_back(op);
             }
-
-        } else if (tokens[0] == "ldm" || tokens[0] == "stm") {
-            for (int i = 1; i < tokens.size(); i++) {
+        }
+        else if (tokens[0] == "ldm" || tokens[0] == "stm")
+        {
+            for (int i = 1; i < tokens.size(); i++)
+            {
                 Operand op;
-                if (tokens[i][0] == '{' || tokens[i][0] == '[') {
+                if (tokens[i][0] == '{' || tokens[i][0] == '[')
+                {
                     tokens[i] = tokens[i].substr(1);
                 }
-                if (tokens[i].back() == '}' || tokens[i].back() == ',' || tokens[i].back() == ']') {
+                if (tokens[i].back() == '}' || tokens[i].back() == ',' || tokens[i].back() == ']')
+                {
                     tokens[i] = tokens[i].substr(0, tokens[i].size() - 1);
                 }
                 op.elements.push_back(tokens[i]);
                 instr.operands.push_back(op);
             }
-        } else {// Other instructions
+        }
+        else
+        { // Other instructions
             Operand op;
             bool isInBrackets = false;
             for (int i = 1; i < tokens.size(); ++i)
@@ -1372,7 +1400,9 @@ bool ACEE::loadProgram(std::string path)
                     op.elements.push_back(tokens[i]);
                     instr.operands.push_back(op);
                     op.elements.clear();
-                } else if (tokens[i][0] == '[') {
+                }
+                else if (tokens[i][0] == '[')
+                {
                     tokens[i] = tokens[i].substr(1);
                     op.elements.push_back(tokens[i]);
                     isInBrackets = true;
@@ -1453,58 +1483,180 @@ inline z3::expr ACEE::lsr(const z3::expr &l, const z3::expr &r)
     return z3::bv2int(bvres, true);
 }
 
-
 void ACEE::logLine(int i)
 {
-    if(logFile.is_open())
+    if (logFile.is_open())
         logFile << "====================   Iteration " << i << "   ====================" << std::endl;
-
 }
 
-void ACEE::logTestInput(const std::vector<int>& inputRegisters) {
-    if (logFile.is_open()) {
+void ACEE::logTestInput(const std::vector<int> &inputRegisters)
+{
+    if (logFile.is_open())
+    {
+        std::vector<int> fin;
+        fin.assign(4, -1);
         logFile << "Test Input: \n";
-        for(int i = 0; i < 4; ++i)
+        for (int i = 0; i < 4; ++i)
         {
-            if(inputRegisters[i])
+            if (inputRegisters[i])
             {
-                logFile << "\t" << "r" << i << " = " << registers[i] << "\n";
+                fin[i] = registers[i];
+                logFile << "\t"
+                        << "r" << i << " = " << registers[i] << "\n";
             }
         }
 
+        all_test_cases.push_back(fin);
+
+
         logFile << std::endl;
     }
 }
 
-void ACEE::logCoverage(const std::unordered_set<int>& coverage) {
-    if (logFile.is_open()) {
-        logFile << "Coverage: " << coverage.size() << " lines covered" << std::endl;
+void ACEE::logCode()
+{
+    if (logFile.is_open())
+    {
+        logFile << "Testing inside file " << p_path << std::endl;
+        logFile << "\nCode Under Test\n";
+        for (auto x : test_code)
+        {
+            std::stringstream s;
+            s << "\tPC: " << std::setw(2) << std::left << x << "\t";
+            s << std::setw(5) << std::left << instructions[x].type << " ";
+            for (const auto &operand : instructions[x].operands)
+            {
+                s << std::setw(4) << std::left << operand.getString() + " ";
+            }
+            logFile << std::setw(30) << std::left << s.str() << '\n';
+        }
+        logFile << std::endl;
+
+        n_test_code.assign(test_code.size(), "");
     }
 }
 
-void ACEE::logPathConstraintsV(const std::vector<std::string>& constraints) {
-    if (logFile.is_open()) {
-        logFile << "Path Constraints: ";
-        for (auto& constraint : constraints) {
-            logFile << constraint << ", ";
+void ACEE::logiCoverage(const std::unordered_set<int> &cov, int iteration)
+{
+    if (logFile.is_open())
+    {
+        logFile << "Coverage:\n";
+        logFile << "\tIndividual Coverage:\t" << cov.size() << "/" << test_code.size() << " lines covered (" << std::fixed << std::setprecision(4) << 100.0f * cov.size() / test_code.size() << "%)\n";
+        logFile << "\tCumulative Coverage:\t" << coverage.size() << "/" << test_code.size() << " lines covered (" << std::fixed << std::setprecision(4) << 100.0f * coverage.size() / test_code.size() << "%)\n";
+
+        for (int i = 0; i < test_code.size(); ++i)
+        {
+            std::stringstream s;
+            int x = test_code[i];
+            s << "\tPC: " << std::setw(2) << std::left << x << "\t";
+            s << std::setw(5) << std::left << instructions[x].type << " ";
+            for (const auto &operand : instructions[x].operands)
+            {
+                s << std::setw(4) << std::left << operand.getString() + " ";
+            }
+
+            if (cov.count(x))
+            {
+                n_test_code[i].append(std::to_string(iteration) + " ");
+                logFile << std::setw(30) << std::left << s.str() << "X";
+            }
+            else
+            {
+                n_test_code[i].append("  ");
+                logFile << std::setw(30) << std::left << s.str();
+
+            }
+            logFile << "\n";
+        }
+        logFile << '\n';
+    }
+}
+
+void ACEE::lognCoverage()
+{
+    if (logFile.is_open())
+    {
+        logFile << "\n\n\n~ ~ ~\n ~ ~ \n~ ~ ~\n";
+        logFile << "Final Coverage: "<< coverage.size() << "/" << test_code.size() << " lines covered (" << 100.0f * coverage.size() / test_code.size() << "%)\n";
+
+        for (int i = 0; i < test_code.size(); ++i)
+        {
+            std::stringstream s;
+            int x = test_code[i];
+            s << "\tPC: " << std::setw(2) << std::left << x << "\t";
+            s << std::setw(5) << std::left << instructions[x].type << " ";
+            for (auto &operand : instructions[x].operands)
+            {
+                s << std::setw(4) << std::left << operand.getString() << " ";
+            }
+            logFile << std::setw(30) << std::left << s.str() << n_test_code[i] << '\n';
+        }
+        logFile << std::endl;
+
+        logFile << "Final testcases:\n";
+        for(auto x: all_test_cases)
+        {
+            for(int i = 0; i < 4; ++i)
+            {
+                if(inputRegisters[i])
+                    logFile << std::setw(10) << "r" + std::to_string(i) + "=" + std::to_string(x[i]) << "\t";
+
+            }
+            logFile << '\n';
+        }
+
+        logFile << std::endl;
+        
+    }
+}
+
+
+
+void ACEE::logPathConstraintsV(const z3::expr_vector &constraints)
+{
+    if (logFile.is_open())
+    {
+        logFile << "Path Constraints: \n";
+        for(int i = 0; i < constraints.size(); ++i)
+        {
+            logFile << '\t' << constraints[i].simplify().to_string() << '\n';
+
         }
         logFile << std::endl;
     }
 }
 
-void ACEE::logPathConstraints(const std::string &constraints) {
-    if (logFile.is_open()) {
+void ACEE::logPathConstraints(const std::string &constraints)
+{
+    if (logFile.is_open())
+    {
         logFile << "Path Constraints: " << constraints << std::endl;
     }
 }
 
-
-
 std::vector<int> ACEE::determineCodeUnderTest(int bPC)
 {
     std::vector<int> result;
-    result.push_back(bPC);
 
-    
+    while (bPC < instructions.size())
+    {
+        result.push_back(bPC);
 
+        // recursively determine code under test
+        if (instructions[bPC].type == "bl")
+        {
+            std::vector<int> r1 = determineCodeUnderTest(symbol2index[instructions[bPC].operands[0].getString()]);
+            for (int x : r1)
+                result.push_back(x);
+        }
+
+        else if (instructions[bPC].type == "bx" || instructions[bPC].type == "ace_end")
+        {
+            return result;
+        }
+
+        bPC++;
+    }
+
+    return result;
 }
