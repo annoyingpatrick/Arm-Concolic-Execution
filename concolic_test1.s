@@ -32,7 +32,7 @@
 
 test:
     push {lr}
-    lsl r2, r1, #1  @ mul r2, r1, #2  @
+    mul r2, r1, #2  @ lsl r2, r1, #1  @
     mov r5, #10
     mov r6, #100
     mov r7, #111
