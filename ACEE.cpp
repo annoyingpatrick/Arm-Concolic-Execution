@@ -475,6 +475,9 @@ void ACEE::executeInstruction(const Instruction &instruction)
     // std::cout << "EXECUTING: " << instruction.type << std::endl;
     // std::string x = instruction.operands[1];
     // int g = getOperandValue(x);
+
+
+
     const std::string opcode = instruction.type;
 
     if (arith.find(opcode) != arith.end())
@@ -487,6 +490,12 @@ void ACEE::executeInstruction(const Instruction &instruction)
         int op2RegIndex = reg2index[instruction.operands[2].getString()];
 
         instruction.print();
+        // std::cout << "\n\t\tsymbolics: \n";
+        // for(int i = 0; i < 16; ++i)
+        // {
+        //     std::cout <<"\t\t\t" << i << " --> " << isRegisterSymbolic[i] << "\n";
+        // }
+        // std::cout << std::endl;
 
         if (opcode == "add")
         {
@@ -503,7 +512,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
@@ -528,6 +537,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
         else if (instruction.type == "sub")
         {
             // R <-- R-R
+            print_message(" " +std::to_string(isRegisterSymbolic[op1RegIndex]) + "   " + std::to_string(isRegisterSymbolic[op2RegIndex]) );
             if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 // This register will be symbolic (who cares if already symbolic)
@@ -540,7 +550,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
@@ -577,7 +587,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
@@ -614,7 +624,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
@@ -651,7 +661,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
@@ -688,7 +698,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
@@ -713,7 +723,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
         else if (instruction.type == "eor")
         {
             // R <-- R^R
-            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
@@ -767,7 +777,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
@@ -813,7 +823,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
@@ -1097,7 +1107,6 @@ void ACEE::executeInstruction(const Instruction &instruction)
         // registers[reg2index[instruction.operands[0].getString()]] = ~val;
         instruction.print();
 
-        // HRRRRRM
         int val = evaluateOperand(instruction.operands[1]);
         if (instruction.operands[1].getString()[0] != '#' && isRegisterSymbolic[getRegisterNumber(instruction.operands[1].getString())])
         {
@@ -1124,8 +1133,16 @@ void ACEE::executeInstruction(const Instruction &instruction)
         // decrement then push onto the stack.
         for (auto &operand : instruction.operands)
         {
+            // concrete
+            int regIndex = getRegisterNumber(operand.getString());
             registers[13] -= 4;
-            writeWord(registers[13], registers[reg2index[operand.getString()]]);
+            writeWord(registers[13], registers[regIndex]);
+
+            // symbolic
+            if(isRegisterSymbolic[regIndex])
+            {
+
+            }
         }
     }
     else if (instruction.type == "pop")
@@ -1224,6 +1241,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
     }
     else if (opcode == "ace")
     {
+        print_message("d");
         instruction.print();
         // signify inputs
         // CAN ONLY SUPPORT r0, r1, r2, r3
@@ -1304,9 +1322,12 @@ void ACEE::revertProcState()
 
 bool ACEE::loadProgram(std::string path)
 {
-    p_path = path;
+    p_path = path.substr(path.find_last_of('/')+1, path.length()-path.find_last_of('/')-1);
+    print_message("Path: " + path);
+    print_message("File: " + p_path);
 
-    std::string output_file = "acee_" + path.substr(0, path.find_last_of('.')) + ".log";
+    std::string output_file = "acee_" + p_path.substr(0, p_path.find_last_of('.')) + ".log";
+    print_message("OUTPU: " + output_file);
 
     logFile.open(output_file, std::ofstream::out | std::ofstream::trunc);
     // logFile.clear();

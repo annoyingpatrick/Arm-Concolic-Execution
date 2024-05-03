@@ -22,7 +22,5 @@ int bitwise(int x, int y)
 int main()
 {
     int sym_x, sym_y;
-    klee_make_symbolic(&sym_x, sizeof(sym_x), "sym_x");
-    klee_make_symbolic(&sym_y, sizeof(sym_y), "sym_y");
     return bitwise(sym_x, sym_y);
 }
