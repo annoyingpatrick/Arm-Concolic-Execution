@@ -1,4 +1,4 @@
-#include "ACE_Engine.h"
+#include "ACEE.h"
 
 /*
  *   Interpreter Class
@@ -7,7 +7,10 @@
 
 const std::unordered_set<std::string> arith = {"add", "sub", "mul", "div", "lsl", "lsr", "and", "orr", "eor"};
 
-ACE_Engine::ACE_Engine() : ctx(), solver(ctx), symbolicMemory(ctx), symbolicRegisters(ctx), path_constraints(ctx)
+
+
+
+ACEE::ACEE() : ctx(), solver(ctx), symbolicMemory(ctx), symbolicRegisters(ctx), path_constraints(ctx)
 {
 
     resetProcState();
@@ -49,12 +52,18 @@ ACE_Engine::ACE_Engine() : ctx(), solver(ctx), symbolicMemory(ctx), symbolicRegi
     // path_constraint = z3::expr_vector(ctx);
 }
 
+ACEE::~ACEE()
+{
+    if(logFile.is_open())
+        logFile.close();
+}
+
 /*
  * Check if instruction is valid
  *
  *
  */
-bool ACE_Engine::isInstructionValid(std::string instruction)
+bool ACEE::isInstructionValid(std::string instruction)
 {
     // Split the instruction into parts
     std::vector<std::string> parts = split(instruction, ' ');
@@ -94,7 +103,7 @@ bool ACE_Engine::isInstructionValid(std::string instruction)
     return true;
 }
 
-void ACE_Engine::concolic()
+void ACEE::concolic()
 {
     terminated = false;
     isConcolic = false;
@@ -131,6 +140,11 @@ void ACE_Engine::concolic()
         i.e. symbolicRegisters[0] == "0"   (--> r0)
     */
 
+
+   std::vector<int> code_under_test = determineCodeUnderTest(PC);
+
+
+
     print_message("We start concolic at PC: " + PC);
     print_message("Saving processor state...");
     saveProcState();
@@ -155,15 +169,19 @@ void ACE_Engine::concolic()
     // first execution
     do
     {   
+        logLine(++iii);
+        logTestInput(inputRegisters);
         isConcolic = true;
-        print_header("Iteration " + std::to_string(++iii));
+        print_header("Iteration " + std::to_string(iii));
         while (isConcolic)
         {
             std::cout << "PC: " << PC << "\t";
             coverage.insert(PC);
             executeInstruction(instructions[PC]);
         }
-
+        print_message("Current coverage = " + std::to_string(coverage.size())+ " lines of code");
+        print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
+        logCoverage(coverage);
         // we may as well go back!
         revertProcState();
 
@@ -174,6 +192,7 @@ void ACE_Engine::concolic()
         solver.reset();
         int constraints = path_constraints.size();
         print_message("This run's path constraint was: "+ path_constraints.to_string());
+        logPathConstraints(path_constraints.to_string());
         z3::expr last_constraint = !path_constraints.back();
         path_constraints.pop_back();
         path_constraints.push_back(last_constraint);
@@ -190,7 +209,6 @@ void ACE_Engine::concolic()
             print_message("We did not find satisfying condition");
             break;
         }
-        
         // Using satisfying model, lets get next values
         z3::model m = solver.get_model();
         print_message("Model: " + m.to_string());
@@ -216,8 +234,8 @@ void ACE_Engine::concolic()
         }
         std::cout << "~~~~~~~~~Z3~~~~~~~~~" << std::endl;
 
-        print_message("Current coverage = " + std::to_string(coverage.size())+ " lines of code");
-        print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
+        // print_message("Current coverage = " + std::to_string(coverage.size())+ " lines of code");
+        // print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
         if(coverage.size() == last_coverage)
         {
             print_message("We made no progress, ending concolic");
@@ -235,7 +253,7 @@ void ACE_Engine::concolic()
  *
  *
  */
-void ACE_Engine::execute()
+void ACEE::execute()
 {
     terminated = false;
     resetProcState();
@@ -288,7 +306,7 @@ void ACE_Engine::execute()
 /*
  * return ther first element of the operand
  */
-std::string ACE_Engine::Operand::getString() const
+std::string ACEE::Operand::getString() const
 {
     if (elements.size() == 0)
     {
@@ -309,7 +327,7 @@ std::string ACE_Engine::Operand::getString() const
 * Read a byte from memory
 */
 
-uint8_t ACE_Engine::readByte(uint32_t address) const
+uint8_t ACEE::readByte(uint32_t address) const
 {
     return memory[address];
 }
@@ -318,7 +336,7 @@ uint8_t ACE_Engine::readByte(uint32_t address) const
 * Read a word from memory
 */
 
-uint32_t ACE_Engine::readWord(uint32_t address) const
+uint32_t ACEE::readWord(uint32_t address) const
 {
     return (memory[address] << 24) | (memory[address + 1] << 16) | (memory[address + 2] << 8) | memory[address + 3];
 }
@@ -327,7 +345,7 @@ uint32_t ACE_Engine::readWord(uint32_t address) const
 * Write a byte to memory
 */
 
-void ACE_Engine::writeByte(uint32_t address, uint8_t value)
+void ACEE::writeByte(uint32_t address, uint8_t value)
 {
     memory[address] = value;
 }
@@ -336,7 +354,7 @@ void ACE_Engine::writeByte(uint32_t address, uint8_t value)
 * Write a word to memory
 */
 
-void ACE_Engine::writeWord(uint32_t address, uint32_t value)
+void ACEE::writeWord(uint32_t address, uint32_t value)
 {
     memory[address] = (value >> 24) & 0xFF;
     memory[address + 1] = (value >> 16) & 0xFF;
@@ -348,7 +366,7 @@ void ACE_Engine::writeWord(uint32_t address, uint32_t value)
 * Evaluate an operand
 */
 
-int ACE_Engine::evaluateOperand(const Operand &Op)
+int32_t ACEE::evaluateOperand(const Operand &Op)
 {
     // Literal value
     if (Op.elements.size() == 1)
@@ -416,7 +434,7 @@ int ACE_Engine::evaluateOperand(const Operand &Op)
  * Print an instruction
  */
 
-void ACE_Engine::Instruction::print() const
+void ACEE::Instruction::print() const
 {
     std::cout << type << " ";
     for (auto &operand : operands)
@@ -431,7 +449,7 @@ void ACE_Engine::Instruction::print() const
  *
  *
  */
-void ACE_Engine::executeInstruction(const Instruction &instruction)
+void ACEE::executeInstruction(const Instruction &instruction)
 {
     // std::cout << "EXECUTING: " << instruction.type << std::endl;
     // std::string x = instruction.operands[1];
@@ -710,6 +728,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         }
         else if (instruction.type == "lsl")
         {
+
             // R <-- R<<R
             if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
@@ -736,7 +755,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
                 z3::expr sym_op2 = ctx.int_val(op2);
 
                 ///////////////////////////////////////////////
-                z3::expr result = z3::shl(sym_op1, sym_op2);
+                z3::expr result = lsl(sym_op1, sym_op2);
                 //////////////////////////////////////////////////
 
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "<<" + sym_op2.to_string());
@@ -752,6 +771,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
             }
             // execute concolically
             registers[reg2index[instruction.operands[0].getString()]] = op1 << op2;
+            // std::cout << "\n\n===\nr2:" << registers[2] << ", r1:" << registers[1] << "\n===\n\n";
         }
         else if (instruction.type == "lsr")
         {
@@ -765,7 +785,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 
                 ////////////////////////////////////////////////////////////////////////////
-                z3::expr result = z3::lsrl(sym_op1, sym_op2);
+                z3::expr result = z3::lshr(sym_op1, sym_op2);
                 ////////////////////////////////////////////////////////////////////////////
 
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + ">>" + sym_op2.to_string());
@@ -881,8 +901,6 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
         }
         else if (instruction.type == "bge")
         {
-            // Similar handling for bge
-            instruction.print();
 
             if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
@@ -896,12 +914,15 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
                 if (cmp_valid && CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
                 {
                     // We are now taking this path
+                    // std::cout << "\n\n===\nr0:" << registers[0] << ", r2:" << registers[2] << "\n===\n\n";
                     path_constraints.push_back(cond);
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
                 else
                 {
+                    // std::cout << "\n\n===\nr0:" << registers[0] << ", r2:" << registers[2] << "\n===\n\n";
+
                     // We are not taking this path
                     path_constraints.push_back(!cond);
                 }
@@ -1104,8 +1125,8 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
     {
         // Similar handling for cmp
         instruction.print();
-        int op1 = evaluateOperand(instruction.operands[0]);
-        int op2 = evaluateOperand(instruction.operands[1]);
+        int32_t op1 = evaluateOperand(instruction.operands[0]);
+        int32_t op2 = evaluateOperand(instruction.operands[1]);
 
         cmp_op1 = op1;
         cmp_op1_r = getRegisterNumber(instruction.operands[0].getString());
@@ -1217,7 +1238,7 @@ void ACE_Engine::executeInstruction(const Instruction &instruction)
     PC++;
 }
 
-void ACE_Engine::printRegisters() const
+void ACEE::printRegisters() const
 {
     for (int i = 0; i < registers.size(); ++i)
     {
@@ -1225,7 +1246,7 @@ void ACE_Engine::printRegisters() const
     }
 }
 
-void ACE_Engine::resetProcState()
+void ACEE::resetProcState()
 {
     memset(memory.data(), 0, memory.size()); //reset memory
     registers.fill(0); //reset registers
@@ -1243,26 +1264,34 @@ void ACE_Engine::resetProcState()
 }
 
 // Helper function to save current processor state
-void ACE_Engine::saveProcState()
+void ACEE::saveProcState()
 {
     old_memory = memory;
     old_registers = registers;
-    old_stack = stack;
     old_CPRS = CPRS;
     old_PC = PC;
 }
 
-void ACE_Engine::revertProcState()
+void ACEE::revertProcState()
 {
     memory = old_memory;
     registers = old_registers;
-    stack = old_stack;
     CPRS = old_CPRS;
     PC = old_PC;
 }
 
-bool ACE_Engine::loadProgram(std::string path)
+bool ACEE::loadProgram(std::string path)
 {
+    p_path = path;
+
+    std::string output_file = "acee_" + path.substr(0, path.find_last_of('.')) + ".log";
+
+    logFile.open(output_file, std::ofstream::out | std::ofstream::trunc);
+    //logFile.clear();
+
+    if(!logFile.is_open())
+        std::cerr << "Failed to open log file." << std::endl;
+
     // get the file name from command line arg
     // open a file in read mode. and read it line by line.
     std::vector<std::string> code;
@@ -1385,25 +1414,97 @@ bool ACE_Engine::loadProgram(std::string path)
     return true;
 }
 
-// z3::expr ACE_Engine::getPathCondition()
+// z3::expr ACEE::getPathCondition()
 // {
 
 // }
 
-inline z3::expr ACE_Engine::getSymbolicRegister(const int &reg)
+inline z3::expr ACEE::getSymbolicRegister(const int &reg)
 {
     return symbolicRegisters[reg];
 }
 // test
 
-inline void ACE_Engine::setSymbolicRegister(const int &reg, const z3::expr &expr)
+inline void ACEE::setSymbolicRegister(const int &reg, const z3::expr &expr)
 {
     symbolicRegisters[reg] = expr;
 }
 
-inline int ACE_Engine::getRegisterNumber(const std::string &reg)
+inline int ACEE::getRegisterNumber(const std::string &reg)
 {
     // Find the position of the first digit
 
     return stoi(reg.substr(1, reg.size() - 1));
+}
+
+inline z3::expr ACEE::lsl(const z3::expr &l, const z3::expr &r)
+{
+    z3::expr bvl = z3::int2bv(32, l);
+    z3::expr bvr = z3::int2bv(32, r);
+    z3::expr bvres = z3::shl(bvl, bvr);
+    return z3::bv2int(bvres, true);
+}
+
+inline z3::expr ACEE::lsr(const z3::expr &l, const z3::expr &r)
+{
+    z3::expr bvl = z3::int2bv(32, l);
+    z3::expr bvr = z3::int2bv(32, r);
+    z3::expr bvres = z3::lshr(bvl, bvr);
+    return z3::bv2int(bvres, true);
+}
+
+
+void ACEE::logLine(int i)
+{
+    if(logFile.is_open())
+        logFile << "====================   Iteration " << i << "   ====================" << std::endl;
+
+}
+
+void ACEE::logTestInput(const std::vector<int>& inputRegisters) {
+    if (logFile.is_open()) {
+        logFile << "Test Input: \n";
+        for(int i = 0; i < 4; ++i)
+        {
+            if(inputRegisters[i])
+            {
+                logFile << "\t" << "r" << i << " = " << registers[i] << "\n";
+            }
+        }
+
+        logFile << std::endl;
+    }
+}
+
+void ACEE::logCoverage(const std::unordered_set<int>& coverage) {
+    if (logFile.is_open()) {
+        logFile << "Coverage: " << coverage.size() << " lines covered" << std::endl;
+    }
+}
+
+void ACEE::logPathConstraintsV(const std::vector<std::string>& constraints) {
+    if (logFile.is_open()) {
+        logFile << "Path Constraints: ";
+        for (auto& constraint : constraints) {
+            logFile << constraint << ", ";
+        }
+        logFile << std::endl;
+    }
+}
+
+void ACEE::logPathConstraints(const std::string &constraints) {
+    if (logFile.is_open()) {
+        logFile << "Path Constraints: " << constraints << std::endl;
+    }
+}
+
+
+
+std::vector<int> ACEE::determineCodeUnderTest(int bPC)
+{
+    std::vector<int> result;
+    result.push_back(bPC);
+
+    
+
 }
