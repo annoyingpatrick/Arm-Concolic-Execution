@@ -181,63 +181,136 @@ void ACEE::concolic()
             symbolicRegisters.set(i, temp);
         }
     }
-    int last_coverage = 0;
     int iii = 0;
     print_message("ENTERING MAIN CONCOLIC LOOP");
     // first execution
     do
     {
+
+        /***** Before Concolic Program Executuion *******/
         std::unordered_set<int> icov;
         logLine(++iii);
         logTestInput(inputRegisters);
         isConcolic = true;
         print_header("Iteration " + std::to_string(iii));
+        path_constraints = z3::expr_vector(ctx);
+
+        /********* Concolically Execute the Program *********/
         while (isConcolic)
         {
             std::cout << "PC: " << PC << "\t";
             icov.insert(PC);
-            coverage.insert(PC);
+            // coverage.insert(PC);
             executeInstruction(instructions[PC]);
         }
-        // print_message("Current coverage = " + std::to_string(icov.size()) + " lines of code");
-        // print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
+
+        /***** Let's checkout current coverage *****/
+        print_message("Current coverage = " + std::to_string(icov.size()) + " lines of code");
+        int newlines = 0;
+        for (int x : icov)
+        {
+            if (coverage.find(x) == coverage.end())
+            {
+                newlines++;
+                coverage.insert(x);
+            }
+        }
+
+        print_message("This iteration, we hit " + std::to_string(newlines) + " new lines.");
+        if (newlines == 0)
+        {
+            logFile << "\n We discovered no new lines, we can end execution now" << std::endl;
+            all_test_cases.pop_back();
+            break;
+        }
+
         logiCoverage(icov, iii);
+
         // we may as well go back!
         revertProcState();
 
+        /**********************     Solve Path Constraint     ************************/
         // path exploration
         // path we took is in path_constraints
         // lets add them to the solver, and negate the last one
         std::cout << "~~~~~~~~~Z3~~~~~~~~~" << std::endl;
         solver.reset();
-        int constraints = path_constraints.size();
-        print_message("This run's path constraint was: " + path_constraints.to_string());
-        logPathConstraintsV(path_constraints);
-        //logPathConstraints(path_constraints.to_string());
-        z3::expr last_constraint = !path_constraints.back();
-        path_constraints.pop_back();
-        path_constraints.push_back(last_constraint);
-        for (int i = 0; i < constraints; ++i)
-            solver.add(path_constraints[i]);
 
-        print_message("After negating last constrant, we will try to solve for: " + path_constraints.to_string());
-        if (solver.check() == z3::sat)
+        int constraints = path_constraints.size();
+        logPathConstraintsV(path_constraints);
+        print_message("This run's path constraint was: " + path_constraints.to_string());
+
+        // simplify the constraints and then add it to the set of visited paths
+        for (int i = 0; i < path_constraints.size(); ++i)
         {
-            print_message("We found satisfying condition!");
+            z3::expr s = path_constraints[i].simplify();
+            path_constraints.set(i, s);
         }
-        else
+        paths_taken.insert(path_constraints.to_string());
+
+        /********************* Path Exploration ******************/
+
+        // Negate last path condition
+        z3::expr last_constraint_negated = (!(path_constraints.back())).simplify();
+        path_constraints.pop_back();
+        path_constraints.push_back(last_constraint_negated);
+
+        print_debug_message("Have we already taken path constraint <<" + path_constraints.to_string() + ">> ???");
+
+        // As long as we find our path in paths_taken, lets keep stepping up in depth
+        while ((paths_taken.find(path_constraints.to_string()) != paths_taken.end()))
         {
-            print_message("We did not find satisfying condition");
-            break;
+            if (path_constraints.empty())
+            {
+                print_debug_message("We can't do any more directed path exploration... exiting!");
+                return;
+            }
+
+            print_debug_message("Path constraint <<" + path_constraints.to_string() + ">> already taken --> lets move up in branch depth?");
+            path_constraints.pop_back();
+            print_debug_message("Have we already taken path constraint <<" + path_constraints.to_string() + ">> ???");
         }
-        // Using satisfying model, lets get next values
+
+        // Solve the path
+        print_debug_message("New path found! Let's try and solve it!");
+
+        for (auto x : path_constraints)
+            solver.add(x);
+
+        // As long as we are unable to satisfy this constraint, lets keep stepping down in depth
+        while (solver.check() != z3::sat)
+        {
+            if (path_constraints.empty())
+            {
+                print_debug_message("No more satisfiable paths... exiting!");
+                return;
+            }
+
+            print_debug_message("Path constraint <<" + path_constraints.to_string() + ">> UNSATISFIABLE... lets move up in branch depth?");
+            path_constraints.pop_back();
+            print_debug_message("Is path constraint <<" + path_constraints.to_string() + ">> SATISFIABLE ???");
+            solver.reset();
+            for (auto x : path_constraints)
+                solver.add(x);
+        }
+
+        print_debug_message("We found satisfying condition!");
+
+        // // Using satisfying model, lets get next values
         z3::model m = solver.get_model();
         print_message("Model: " + m.to_string());
+        // symbolicRegisters = z3::expr_vector(ctx);
+        // symbolicRegisters.resize(16);
+        isRegisterSymbolic.clear();
+        isRegisterSymbolic.assign(16, 0);
+
         for (int i = 0; i < 4; ++i)
         {
             if (inputRegisters[i])
             {
-                print_message("\t\t[DEBUG] r" + std::to_string(i) + ": model eval --> " + m.eval(symbolicRegisters[i]).to_string());
+                isRegisterSymbolic[i] = 1;
+                // logFile << "TEST: " << "r" << i << " " << m.eval(symbolicRegisters[i]).to_string()
+                print_message("\t\t[DEBUG] r" + std::to_string(i) + ": model eval(" + symbolicRegisters[i].to_string() + ") --> " + m.eval(symbolicRegisters[i]).to_string());
                 // print_message("HMM-->" + symbolicRegisters[i].to_string());
                 if (symbolicRegisters[i].to_string() == m.eval(symbolicRegisters[i]).to_string())
                 {
@@ -252,16 +325,34 @@ void ACEE::concolic()
                 }
             }
         }
+
+        for (int i = 0; i < 16; ++i)
+        {
+            symbolicRegisters.pop_back();
+        }
+        symbolicRegisters.resize(16);
+
+        for (int i = 0; i < 4; ++i)
+        {
+            if (inputRegisters[i])
+            {
+                isRegisterSymbolic[i] = 1;
+                z3::expr temp = ctx.int_const(("r" + std::to_string(i)).c_str());
+                symbolicRegisters.set(i, temp);
+            }
+        }
+
         std::cout << "~~~~~~~~~Z3~~~~~~~~~" << std::endl;
 
         // print_message("Current coverage = " + std::to_string(coverage.size())+ " lines of code");
         // print_message("This iteration, we hit " + std::to_string(coverage.size() - last_coverage) + " new lines.");
-        if (coverage.size() == last_coverage)
-        {
-            print_message("We made no progress, ending concolic");
-            break;
-        }
-        last_coverage = coverage.size();
+        // if (coverage.size() == last_coverage)
+        // {
+        //     print_message("We made no progress, ending concolic");
+
+        //     break;
+        // }
+        // last_coverage = coverage.size();
 
     } while (true);
 
@@ -476,8 +567,6 @@ void ACEE::executeInstruction(const Instruction &instruction)
     // std::string x = instruction.operands[1];
     // int g = getOperandValue(x);
 
-
-
     const std::string opcode = instruction.type;
 
     if (arith.find(opcode) != arith.end())
@@ -537,7 +626,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
         else if (instruction.type == "sub")
         {
             // R <-- R-R
-            print_message(" " +std::to_string(isRegisterSymbolic[op1RegIndex]) + "   " + std::to_string(isRegisterSymbolic[op2RegIndex]) );
+            print_message(" " + std::to_string(isRegisterSymbolic[op1RegIndex]) + "   " + std::to_string(isRegisterSymbolic[op2RegIndex]));
             if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 // This register will be symbolic (who cares if already symbolic)
@@ -578,14 +667,15 @@ void ACEE::executeInstruction(const Instruction &instruction)
             if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 // This register will be symbolic (who cares if already symbolic)
-                isRegisterSymbolic[destRegIndex] = 1;
-                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
+                
+                //print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic1");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 * sym_op2;
-                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
-                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                //print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
+                //print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
+                isRegisterSymbolic[destRegIndex] = 1;
             }
             else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
@@ -656,7 +746,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
-                z3::expr result = sym_op1 | sym_op2;
+                z3::expr result = orr(sym_op1, sym_op2);
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "|" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
@@ -668,7 +758,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
-                z3::expr result = sym_op1 | sym_op2;
+                z3::expr result = orr(sym_op1, sym_op2);
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "|" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
@@ -693,7 +783,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
-                z3::expr result = sym_op1 & sym_op2;
+                z3::expr result = andd(sym_op1, sym_op2);
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "&" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
@@ -705,7 +795,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
-                z3::expr result = sym_op1 & sym_op2;
+                z3::expr result = andd(sym_op1, sym_op2);
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "&" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
@@ -723,26 +813,26 @@ void ACEE::executeInstruction(const Instruction &instruction)
         else if (instruction.type == "eor")
         {
             // R <-- R^R
-            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex]))
+            if ((instruction.operands[2].getString()[0] != '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
             {
                 // This register will be symbolic (who cares if already symbolic)
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
-                z3::expr result = sym_op1 ^ sym_op2;
+                z3::expr result = eor(sym_op1, sym_op2);
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "^" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
             }
-            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex] || isRegisterSymbolic[op2RegIndex]))
+            else if ((instruction.operands[2].getString()[0] == '#') && (isRegisterSymbolic[op1RegIndex]))
             {
                 isRegisterSymbolic[destRegIndex] = 1;
                 print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic");
 
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = ctx.int_val(op2);
-                z3::expr result = sym_op1 ^ sym_op2;
+                z3::expr result = eor(sym_op1, sym_op2);
                 print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "^" + sym_op2.to_string());
                 print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
@@ -863,9 +953,12 @@ void ACEE::executeInstruction(const Instruction &instruction)
 
         else if (instruction.type == "bne")
         {
+            print_debug_message("ENTERBNE");
             // Similar handling for bne
+            print_debug_message("SS: " + std::to_string(isRegisterSymbolic[cmp_op1_r]) + " " + std::to_string(isRegisterSymbolic[cmp_op2_r]));
             if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
+                print_debug_message("ENTER1");
                 // Symbolic
                 z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
                 z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
@@ -876,21 +969,29 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 if (CPRS['Z'] == 0)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
+                    print_debug_message(path_constraints.to_string());
                     path_constraints.push_back(cond);
+                    print_debug_message(path_constraints.to_string());
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
                 else
                 {
                     // We are not taking this path, so conditional not held true
+                    print_debug_message(path_constraints.to_string());
                     path_constraints.push_back(!cond);
+                    print_debug_message(path_constraints.to_string());
                 }
             }
             else
             {
+                print_debug_message("ENTER2");
+
                 if (CPRS['Z'] == 0)
                 {
+                    print_debug_message("FUCK");
                     PC = symbol2index[instruction.operands[0].getString()];
+
                     return;
                 }
             }
@@ -912,6 +1013,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
                     path_constraints.push_back(cond);
+
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
@@ -947,6 +1049,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                     // We are now taking this path
                     // std::cout << "\n\n===\nr0:" << registers[0] << ", r2:" << registers[2] << "\n===\n\n";
                     path_constraints.push_back(cond);
+
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
@@ -961,6 +1064,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
             else if (CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
             {
                 PC = symbol2index[instruction.operands[0].getString()];
+
                 return;
             }
         }
@@ -980,12 +1084,14 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
                     path_constraints.push_back(cond);
+
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
                 else
                 {
                     // We are not taking this path, so conditional not held true
+
                     path_constraints.push_back(!cond);
                 }
             }
@@ -1014,6 +1120,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
                     path_constraints.push_back(cond);
+
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
@@ -1048,6 +1155,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
                     path_constraints.push_back(cond);
+
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
@@ -1134,15 +1242,14 @@ void ACEE::executeInstruction(const Instruction &instruction)
         for (auto &operand : instruction.operands)
         {
             // concrete
-            int regIndex = getRegisterNumber(operand.getString());
             registers[13] -= 4;
-            writeWord(registers[13], registers[regIndex]);
+            writeWord(registers[13], registers[reg2index[operand.getString()]]);
 
-            // symbolic
-            if(isRegisterSymbolic[regIndex])
-            {
+            // // symbolic
+            // if(isRegisterSymbolic[regIndex])
+            // {
 
-            }
+            // }
         }
     }
     else if (instruction.type == "pop")
@@ -1322,7 +1429,7 @@ void ACEE::revertProcState()
 
 bool ACEE::loadProgram(std::string path)
 {
-    p_path = path.substr(path.find_last_of('/')+1, path.length()-path.find_last_of('/')-1);
+    p_path = path.substr(path.find_last_of('/') + 1, path.length() - path.find_last_of('/') - 1);
     print_message("Path: " + path);
     print_message("File: " + p_path);
 
@@ -1504,6 +1611,30 @@ inline z3::expr ACEE::lsr(const z3::expr &l, const z3::expr &r)
     return z3::bv2int(bvres, true);
 }
 
+inline z3::expr ACEE::eor(const z3::expr &l, const z3::expr &r)
+{
+    z3::expr bvl = z3::int2bv(32, l);
+    z3::expr bvr = z3::int2bv(32, r);
+    z3::expr bvres = bvl ^ bvr;
+    return z3::bv2int(bvres, true);
+}
+
+inline z3::expr ACEE::andd(const z3::expr &l, const z3::expr &r)
+{
+    z3::expr bvl = z3::int2bv(32, l);
+    z3::expr bvr = z3::int2bv(32, r);
+    z3::expr bvres = bvl & bvr;
+    return z3::bv2int(bvres, true);
+}
+
+inline z3::expr ACEE::orr(const z3::expr &l, const z3::expr &r)
+{
+    z3::expr bvl = z3::int2bv(32, l);
+    z3::expr bvr = z3::int2bv(32, r);
+    z3::expr bvres = bvl | bvr;
+    return z3::bv2int(bvres, true);
+}
+
 void ACEE::logLine(int i)
 {
     if (logFile.is_open())
@@ -1528,7 +1659,6 @@ void ACEE::logTestInput(const std::vector<int> &inputRegisters)
         }
 
         all_test_cases.push_back(fin);
-
 
         logFile << std::endl;
     }
@@ -1561,6 +1691,7 @@ void ACEE::logiCoverage(const std::unordered_set<int> &cov, int iteration)
 {
     if (logFile.is_open())
     {
+        // check if we made any new
         logFile << "Coverage:\n";
         logFile << "\tIndividual Coverage:\t" << cov.size() << "/" << test_code.size() << " lines covered (" << std::fixed << std::setprecision(4) << 100.0f * cov.size() / test_code.size() << "%)\n";
         logFile << "\tCumulative Coverage:\t" << coverage.size() << "/" << test_code.size() << " lines covered (" << std::fixed << std::setprecision(4) << 100.0f * coverage.size() / test_code.size() << "%)\n";
@@ -1585,7 +1716,6 @@ void ACEE::logiCoverage(const std::unordered_set<int> &cov, int iteration)
             {
                 n_test_code[i].append("  ");
                 logFile << std::setw(30) << std::left << s.str();
-
             }
             logFile << "\n";
         }
@@ -1597,8 +1727,8 @@ void ACEE::lognCoverage()
 {
     if (logFile.is_open())
     {
-        logFile << "\n\n\n~ ~ ~\n ~ ~ \n~ ~ ~\n";
-        logFile << "Final Coverage: "<< coverage.size() << "/" << test_code.size() << " lines covered (" << 100.0f * coverage.size() / test_code.size() << "%)\n";
+        logFile << "\n\n\n~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n";
+        logFile << "Final Coverage: " << coverage.size() << "/" << test_code.size() << " lines covered (" << 100.0f * coverage.size() / test_code.size() << "%)\n";
 
         for (int i = 0; i < test_code.size(); ++i)
         {
@@ -1615,35 +1745,33 @@ void ACEE::lognCoverage()
         logFile << std::endl;
 
         logFile << "Final testcases:\n";
-        for(auto x: all_test_cases)
+        for (auto x : all_test_cases)
         {
-            for(int i = 0; i < 4; ++i)
+            for (int i = 0; i < 4; ++i)
             {
-                if(inputRegisters[i])
+                if (inputRegisters[i])
                     logFile << std::setw(10) << "r" + std::to_string(i) + "=" + std::to_string(x[i]) << "\t";
-
             }
             logFile << '\n';
         }
 
         logFile << std::endl;
-        
     }
 }
-
-
 
 void ACEE::logPathConstraintsV(const z3::expr_vector &constraints)
 {
     if (logFile.is_open())
     {
+        z3::expr_vector n(ctx);
         logFile << "Path Constraints: \n";
-        for(int i = 0; i < constraints.size(); ++i)
+        for (int i = 0; i < constraints.size(); ++i)
         {
+            n.push_back(constraints[i].simplify());
             logFile << '\t' << constraints[i].simplify().to_string() << '\n';
-
         }
         logFile << std::endl;
+        path_constraints = n;
     }
 }
 
@@ -1681,3 +1809,66 @@ std::vector<int> ACEE::determineCodeUnderTest(int bPC)
 
     return result;
 }
+
+// void ACEE::stack_jaunt(int branch)
+// {
+//     if (k < path_stack.size())
+//     {
+//         if (path_stack[k].first != branch)
+//         {
+//             print_debug("ERROR", "DUDE WQTF");
+//             force_ok = 0;
+//             return; // raise an exception
+//         }
+//         else if (k == path_stack.size() - 1)
+//         {
+//             path_stack[k].first = branch;
+//             path_stack[k].second = 1;
+//         }
+//     }
+//     else
+//         path_stack.push_back(std::pair(branch, 0));
+
+//     //
+
+// }
+
+// z3::model ACEE::solve_p_c(int kt)
+// {
+//     //  let j be the smallest number such that
+//     //      for all h with −1 ≤ j<h<ktry, stack[h].done = 1
+//     int j = -1;
+//     // We need to ensure all h from j+1 to ktry-1 are done
+//     for (int h = 0; h < kt; h++) {
+//         if (!path_stack[h].second) {
+//             j = h;  // Update j to the last index where done is false
+//         }
+//     }
+//     if (j == -1)
+//     {
+//         print_debug("FUCKCUK", "FUCKFUCK");
+//         exit(0);
+//     }
+
+//     z3::expr t = (!path_constraints[j]).simplify();
+//     print_message("We are going to negate " + t.to_string());
+//     path_constraints.set(j, t);                    // negated path constraitn
+//     path_stack[j].first = path_stack[j].first ^ 1; // negating
+//     //z3::expr_vector newp(ctx);
+
+//     logFile << "Solving for: \n";
+//     for(int i = 0; i <= j; i++){
+//         logFile << "\t" << path_constraints[i].simplify() << '\n';
+//         solver.add(path_constraints[i].simplify());
+//     }
+
+//     //if path_constraint[0 --- j] has solution
+//     if (solver.check() == z3::sat){
+//         print_message("INMODEL: " + solver.get_model().to_string());
+//         //new stack
+//         path_stack = std::vector(path_stack.begin(), path_stack.begin()+j+1);
+//         return solver.get_model();
+//     }
+//     else
+//         return solve_p_c(j);
+// }

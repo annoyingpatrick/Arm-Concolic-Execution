@@ -88,7 +88,7 @@ Coverage:
 
 Path Constraints: 
 	(= r0 100000)
-	(<= r1 50000)
+	(>= r0 (* 2 r1))
 
 ====================   Iteration 3   ====================
 Test Input: 
@@ -122,15 +122,21 @@ Coverage:
 
 Path Constraints: 
 	(= r0 100000)
-	(not (<= r1 50000))
-	(not (<= r1 50000))
+	(not (>= r0 (* 2 r1)))
+
+====================   Iteration 4   ====================
+Test Input: 
+	r0 = 100000
+	r1 = 0
+
+
+ We discovered no new lines, we can end execution now
 
 
 
-
-~ ~ ~
- ~ ~ 
-~ ~ ~
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 Final Coverage: 21/21 lines covered (100.0000%)
 	PC: 24	bl    test            1 2 3 
 	PC: 0 	push  lr              1 2 3 

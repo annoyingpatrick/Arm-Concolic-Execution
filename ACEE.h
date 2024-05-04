@@ -16,6 +16,8 @@
 #include <sstream>
 #include <fstream>
 #include <iterator>
+#include <stdlib.h>
+//#include <pair>
 
 #include <z3++.h>
 
@@ -58,7 +60,9 @@ public:
 
     inline z3::expr lsl(const z3::expr &l, const z3::expr &r);
     inline z3::expr lsr(const z3::expr &l, const z3::expr &r);
-
+    inline z3::expr eor(const z3::expr &l, const z3::expr &r);
+    inline z3::expr orr(const z3::expr &l, const z3::expr &r);
+    inline z3::expr andd(const z3::expr &l, const z3::expr &r);
 
     // Concolic
     void concolic();
@@ -107,6 +111,7 @@ private:
     z3::context ctx;
     z3::expr_vector symbolicMemory;            // symbolic memory
     z3::expr_vector symbolicRegisters;          // symbolic registers
+    //z3::expr_vector lastRegisters;
     inline z3::expr getSymbolicRegister(const int &reg);
     void setSymbolicRegister(const int &reg, const z3::expr &expr);
 
@@ -115,12 +120,15 @@ private:
     std::unordered_set<int> coverage;
     std::vector<int> isRegisterSymbolic;
     z3::expr_vector path_constraints; 
+    std::unordered_set<std::string> paths_taken;
+    
+
+
       
     z3::solver solver;                                      // contain
 
     // Concolic outputting
     void logCode();
-    // void logNCode();
     void logLine(int i);
     void logTestInput(const std::vector<int>& inputRegisters);
     void logiCoverage(const std::unordered_set<int>& cov, int iterations);

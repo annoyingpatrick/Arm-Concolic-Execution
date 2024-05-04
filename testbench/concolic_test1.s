@@ -12,8 +12,8 @@
 @       }
 @       return 10;
 @   }
-@
-@
+
+
 @   int main()
 @   {
 @       int x = 7;
