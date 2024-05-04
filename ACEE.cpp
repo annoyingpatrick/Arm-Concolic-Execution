@@ -181,6 +181,7 @@ void ACEE::concolic()
             symbolicRegisters.set(i, temp);
         }
     }
+
     int iii = 0;
     print_message("ENTERING MAIN CONCOLIC LOOP");
     // first execution
@@ -668,12 +669,12 @@ void ACEE::executeInstruction(const Instruction &instruction)
             {
                 // This register will be symbolic (who cares if already symbolic)
                 
-                //print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic1");
+                print_message("\t\t[DEBUG] r" + std::to_string(destRegIndex) + " is now symbolic1");
                 z3::expr sym_op1 = isRegisterSymbolic[op1RegIndex] ? symbolicRegisters[op1RegIndex] : ctx.int_val(registers[op1RegIndex]);
                 z3::expr sym_op2 = isRegisterSymbolic[op2RegIndex] ? symbolicRegisters[op2RegIndex] : ctx.int_val(registers[op2RegIndex]);
                 z3::expr result = sym_op1 * sym_op2;
-                //print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
-                //print_message("\t\t[DEBUG] RESULT : " + result.to_string());
+                print_message("\t\t[DEBUG] DOING : " + sym_op1.to_string() + "*" + sym_op2.to_string());
+                print_message("\t\t[DEBUG] RESULT : " + result.to_string());
                 symbolicRegisters.set(destRegIndex, result);
                 isRegisterSymbolic[destRegIndex] = 1;
             }
@@ -953,9 +954,9 @@ void ACEE::executeInstruction(const Instruction &instruction)
 
         else if (instruction.type == "bne")
         {
-            print_debug_message("ENTERBNE");
+            //print_debug_message("ENTERBNE");
             // Similar handling for bne
-            print_debug_message("SS: " + std::to_string(isRegisterSymbolic[cmp_op1_r]) + " " + std::to_string(isRegisterSymbolic[cmp_op2_r]));
+            //print_debug_message("SS: " + std::to_string(isRegisterSymbolic[cmp_op1_r]) + " " + std::to_string(isRegisterSymbolic[cmp_op2_r]));
             if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
                 print_debug_message("ENTER1");
@@ -969,27 +970,25 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 if (CPRS['Z'] == 0)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
-                    print_debug_message(path_constraints.to_string());
+                    //print_debug_message(path_constraints.to_string());
                     path_constraints.push_back(cond);
-                    print_debug_message(path_constraints.to_string());
+                    //print_debug_message(path_constraints.to_string());
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
                 else
                 {
                     // We are not taking this path, so conditional not held true
-                    print_debug_message(path_constraints.to_string());
                     path_constraints.push_back(!cond);
-                    print_debug_message(path_constraints.to_string());
                 }
             }
             else
             {
-                print_debug_message("ENTER2");
+                //print_debug_message("ENTER2");
 
                 if (CPRS['Z'] == 0)
                 {
-                    print_debug_message("FUCK");
+                    //print_debug_message("FUCK");
                     PC = symbol2index[instruction.operands[0].getString()];
 
                     return;
@@ -1013,7 +1012,6 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
                     path_constraints.push_back(cond);
-
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
@@ -1049,7 +1047,6 @@ void ACEE::executeInstruction(const Instruction &instruction)
                     // We are now taking this path
                     // std::cout << "\n\n===\nr0:" << registers[0] << ", r2:" << registers[2] << "\n===\n\n";
                     path_constraints.push_back(cond);
-
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
@@ -1064,7 +1061,6 @@ void ACEE::executeInstruction(const Instruction &instruction)
             else if (CPRS['Z'] == 0 && CPRS['N'] == CPRS['V'])
             {
                 PC = symbol2index[instruction.operands[0].getString()];
-
                 return;
             }
         }
@@ -1084,14 +1080,12 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
                     path_constraints.push_back(cond);
-
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
                 else
                 {
                     // We are not taking this path, so conditional not held true
-
                     path_constraints.push_back(!cond);
                 }
             }
@@ -1120,7 +1114,6 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
                     path_constraints.push_back(cond);
-
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
@@ -1155,7 +1148,6 @@ void ACEE::executeInstruction(const Instruction &instruction)
                 {
                     // We are taking this path, so conditional held true, add this to path constrsing
                     path_constraints.push_back(cond);
-
                     PC = symbol2index[instruction.operands[0].getString()];
                     return;
                 }
@@ -1809,66 +1801,3 @@ std::vector<int> ACEE::determineCodeUnderTest(int bPC)
 
     return result;
 }
-
-// void ACEE::stack_jaunt(int branch)
-// {
-//     if (k < path_stack.size())
-//     {
-//         if (path_stack[k].first != branch)
-//         {
-//             print_debug("ERROR", "DUDE WQTF");
-//             force_ok = 0;
-//             return; // raise an exception
-//         }
-//         else if (k == path_stack.size() - 1)
-//         {
-//             path_stack[k].first = branch;
-//             path_stack[k].second = 1;
-//         }
-//     }
-//     else
-//         path_stack.push_back(std::pair(branch, 0));
-
-//     //
-
-// }
-
-// z3::model ACEE::solve_p_c(int kt)
-// {
-//     //  let j be the smallest number such that
-//     //      for all h with −1 ≤ j<h<ktry, stack[h].done = 1
-//     int j = -1;
-//     // We need to ensure all h from j+1 to ktry-1 are done
-//     for (int h = 0; h < kt; h++) {
-//         if (!path_stack[h].second) {
-//             j = h;  // Update j to the last index where done is false
-//         }
-//     }
-//     if (j == -1)
-//     {
-//         print_debug("FUCKCUK", "FUCKFUCK");
-//         exit(0);
-//     }
-
-//     z3::expr t = (!path_constraints[j]).simplify();
-//     print_message("We are going to negate " + t.to_string());
-//     path_constraints.set(j, t);                    // negated path constraitn
-//     path_stack[j].first = path_stack[j].first ^ 1; // negating
-//     //z3::expr_vector newp(ctx);
-
-//     logFile << "Solving for: \n";
-//     for(int i = 0; i <= j; i++){
-//         logFile << "\t" << path_constraints[i].simplify() << '\n';
-//         solver.add(path_constraints[i].simplify());
-//     }
-
-//     //if path_constraint[0 --- j] has solution
-//     if (solver.check() == z3::sat){
-//         print_message("INMODEL: " + solver.get_model().to_string());
-//         //new stack
-//         path_stack = std::vector(path_stack.begin(), path_stack.begin()+j+1);
-//         return solver.get_model();
-//     }
-//     else
-//         return solve_p_c(j);
-// }

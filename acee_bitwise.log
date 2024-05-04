@@ -33,6 +33,7 @@ Test Input:
 	r0 = 0
 	r1 = 0
 
+<<<<<<< HEAD
 Coverage:
 	Individual Coverage:	21/26 lines covered (80.7692%)
 	Cumulative Coverage:	21/26 lines covered (80.7692%)
@@ -156,3 +157,5 @@ Final Coverage: 21/26 lines covered (80.7692%)
 Final testcases:
 r0=0      	r1=0      	
 
+=======
+>>>>>>> 2682bd02318240696b16e4b4ab64b8d0e220c9a0
