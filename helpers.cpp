@@ -20,17 +20,35 @@ void print_debug(const std::string &header, const std::string &message)
 
 void print_header(const std::string &message)
 {
+    #ifdef DEBUG
+
     std::cout <<"==============================" << message << "==============================" << std::endl;
+    #endif
 }
 void print_line()
 {
+    #ifdef DEBUG
+
     std::cout <<"===================================" << "===================================" << std::endl;
+    #endif
 }
 
 void print_message(const std::string &message)
 {
+    #ifdef DEBUG
+
     std::cout << message << std::endl;
+    #endif
 }
+
+void print_debug_message(const std::string &message)
+{
+    #ifdef DEBUG
+
+    std::cout << "\t[DEBUG] " << message << std::endl;
+    #endif
+}
+
 
 /*
 * Helper function
