@@ -12,13 +12,24 @@ LDFLAGS = -L/usr/local/lib -L/Library/Developer/CommandLineTools/Library/Framewo
 LDLIBS = -lz3
 
 # Specify the target
-TARGET = ACE_ENGINE
+TARGET = ACEE
 
 # Specify the source file(s)
-SRC = ACE_Engine.cpp z3temp.cpp helpers.cpp main.cpp
+SRC = ACEE.cpp helpers.cpp main.cpp
 
 # Default target
 all: $(TARGET)
+
+ifneq (,$(filter run,$(MAKECMDGOALS)))
+  RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  ifneq (,$(RUN_ARGS))
+    $(eval $(RUN_ARGS):;@:)
+  endif
+endif
+
+run: $(TARGET)
+	./$(TARGET) $(RUN_ARGS)
+	
 
 $(TARGET): $(SRC)
 	$(CXX) $(CXXFLAGS) $(INCLUDES)  -o $(TARGET) $(SRC) $(LDFLAGS) $(LDLIBS)
