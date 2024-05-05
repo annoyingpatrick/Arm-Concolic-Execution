@@ -56,6 +56,10 @@ Coverage:
 Path Constraints: 
 	(not (= r0 100000))
 
+After doing path exploration, we will solve for path constraint: (ast-vector
+  (= r0 100000))
+According to Z3, r0 should be 100000
+According to Z3, r1 does not have impact, we will pick safe value 0
 ====================   Iteration 2   ====================
 Test Input: 
 	r0 = 100000
@@ -88,12 +92,13 @@ Coverage:
 
 Path Constraints: 
 	(= r0 100000)
-<<<<<<< HEAD
 	(>= r0 (* 2 r1))
-=======
-	(<= r1 50000)
->>>>>>> 2682bd02318240696b16e4b4ab64b8d0e220c9a0
 
+After doing path exploration, we will solve for path constraint: (ast-vector
+  (= r0 100000)
+  (not (>= r0 (* 2 r1))))
+According to Z3, r0 should be 100000
+According to Z3, r1 should be 50001
 ====================   Iteration 3   ====================
 Test Input: 
 	r0 = 100000
@@ -126,9 +131,12 @@ Coverage:
 
 Path Constraints: 
 	(= r0 100000)
-<<<<<<< HEAD
 	(not (>= r0 (* 2 r1)))
 
+After doing path exploration, we will solve for path constraint: (ast-vector
+  (= r0 100000))
+According to Z3, r0 should be 100000
+According to Z3, r1 does not have impact, we will pick safe value 0
 ====================   Iteration 4   ====================
 Test Input: 
 	r0 = 100000
@@ -142,17 +150,6 @@ Test Input:
 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-=======
-	(not (<= r1 50000))
-	(not (<= r1 50000))
-
-
-
-
-~ ~ ~
- ~ ~ 
-~ ~ ~
->>>>>>> 2682bd02318240696b16e4b4ab64b8d0e220c9a0
 Final Coverage: 21/21 lines covered (100.0000%)
 	PC: 24	bl    test            1 2 3 
 	PC: 0 	push  lr              1 2 3 

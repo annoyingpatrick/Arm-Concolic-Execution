@@ -1,6 +1,9 @@
 int exponentiation(int x, int y)
 {
     int result = 1;
+    if(x < 0 || y < 0) 
+        return result;
+    
     for(int i = 0;i < y; ++i)
         result *= x;
 

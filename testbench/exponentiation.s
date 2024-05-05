@@ -15,6 +15,12 @@ exponentiation:
         mov     r4, #1
         mov     r3, #0
 loop:
+        @ bounds checking
+        cmp     r0, #0
+        blt     end
+        cmp     r1, #0
+        blt     end
+
         cmp     r3, r1
         beq     end
         mul     r4, r4, r0
@@ -33,6 +39,4 @@ main:
         bl      exponentiation
         out     r0
         ace_end
-
-
         bx      lr

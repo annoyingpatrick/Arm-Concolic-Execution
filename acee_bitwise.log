@@ -33,7 +33,6 @@ Test Input:
 	r0 = 0
 	r1 = 0
 
-<<<<<<< HEAD
 Coverage:
 	Individual Coverage:	21/26 lines covered (80.7692%)
 	Cumulative Coverage:	21/26 lines covered (80.7692%)
@@ -113,6 +112,46 @@ Path Constraints:
                    a!4))))
   (= a!5 r0)))))
 
+After doing path exploration, we will solve for path constraint: (ast-vector
+  (let ((a!1 (+ (- 4294967296)
+                (bv2int (bvxor ((_ int2bv 32) r0) ((_ int2bv 32) r1))))))
+  (let ((a!2 (ite (bvsle #x00000000
+                         (bvxor ((_ int2bv 32) r0) ((_ int2bv 32) r1)))
+                  (bv2int (bvxor ((_ int2bv 32) r0) ((_ int2bv 32) r1)))
+                  a!1)))
+  (let ((a!3 (bvsle #x00000000
+                    (concat #b0000000000000000000000000000000
+                            ((_ extract 0 0) ((_ int2bv 32) a!2)))))
+        (a!4 (+ (- 4294967296) (bv2int ((_ extract 0 0) ((_ int2bv 32) a!2))))))
+  (let ((a!5 (ite a!3 (bv2int ((_ extract 0 0) ((_ int2bv 32) a!2))) a!4)))
+    (= a!5 r0)))))
+  (let ((a!1 (bvnot (bvor (bvnot ((_ int2bv 32) r1)) (bvnot ((_ int2bv 32) r0))))))
+  (let ((a!2 ((_ int2bv 32)
+               (ite (bvsle #x00000000 a!1)
+                    (bv2int a!1)
+                    (+ (- 4294967296) (bv2int a!1))))))
+  (let ((a!3 (+ (- 4294967296) (* 2 (bv2int ((_ extract 1 1) a!2))))))
+  (let ((a!4 (ite (bvsle #x00000000
+                         (concat #b000000000000000000000000000000
+                                 ((_ extract 1 1) a!2)
+                                 #b0))
+                  (* 2 (bv2int ((_ extract 1 1) a!2)))
+                  a!3)))
+    (= a!4 r0)))))
+  (let ((a!1 (+ (- 4294967296)
+                (bv2int (bvor ((_ int2bv 32) r0) ((_ int2bv 32) r1))))))
+  (let ((a!2 (ite (bvsle #x00000000
+                         (bvor ((_ int2bv 32) r0) ((_ int2bv 32) r1)))
+                  (bv2int (bvor ((_ int2bv 32) r0) ((_ int2bv 32) r1)))
+                  a!1)))
+  (let ((a!3 (bvsle #x00000000
+                    (concat #b00000000000000000000000000000
+                            ((_ extract 2 2) ((_ int2bv 32) a!2))
+                            #b00)))
+        (a!4 (* 4 (bv2int ((_ extract 2 2) ((_ int2bv 32) a!2))))))
+    (not (= (ite a!3 a!4 (+ (- 4294967296) a!4)) r0))))))
+According to Z3, r0 does not have impact, we will pick safe value 0
+According to Z3, r1 does not have impact, we will pick safe value 0
 ====================   Iteration 2   ====================
 Test Input: 
 	r0 = 0
@@ -157,5 +196,3 @@ Final Coverage: 21/26 lines covered (80.7692%)
 Final testcases:
 r0=0      	r1=0      	
 
-=======
->>>>>>> 2682bd02318240696b16e4b4ab64b8d0e220c9a0

@@ -278,6 +278,8 @@ void ACEE::concolic()
         for (auto x : path_constraints)
             solver.add(x);
 
+        logFile << "After doing path exploration, we will solve for path constraint: " << path_constraints.to_string() << std::endl;
+
         // As long as we are unable to satisfy this constraint, lets keep stepping down in depth
         while (solver.check() != z3::sat)
         {
@@ -300,10 +302,12 @@ void ACEE::concolic()
         // // Using satisfying model, lets get next values
         z3::model m = solver.get_model();
         print_message("Model: " + m.to_string());
+
         // symbolicRegisters = z3::expr_vector(ctx);
         // symbolicRegisters.resize(16);
         isRegisterSymbolic.clear();
         isRegisterSymbolic.assign(16, 0);
+        
 
         for (int i = 0; i < 4; ++i)
         {
@@ -312,17 +316,22 @@ void ACEE::concolic()
                 isRegisterSymbolic[i] = 1;
                 // logFile << "TEST: " << "r" << i << " " << m.eval(symbolicRegisters[i]).to_string()
                 print_message("\t\t[DEBUG] r" + std::to_string(i) + ": model eval(" + symbolicRegisters[i].to_string() + ") --> " + m.eval(symbolicRegisters[i]).to_string());
+                //logFile << "According to Z3, r" + std::to_string(i) + " does not have impact, we will pick safe value 0" << std::endl;
                 // print_message("HMM-->" + symbolicRegisters[i].to_string());
                 if (symbolicRegisters[i].to_string() == m.eval(symbolicRegisters[i]).to_string())
                 {
                     // any value works... we'll pick 0
                     registers[i] = 0;
                     print_message("\t\t[DEBUG] We will set r" + std::to_string(i) + " --> 0");
+                    logFile << "According to Z3, r" + std::to_string(i) + " does not have impact, we will pick safe value 0" << std::endl;
+
                 }
                 else
                 {
                     registers[i] = m.eval(symbolicRegisters[i]).as_int64();
                     print_message("\t\t[DEBUG] We will set r" + std::to_string(i) + " --> " + std::to_string(registers[i]));
+                    logFile << "According to Z3, r" + std::to_string(i) + " should be " + m.eval(symbolicRegisters[i]).to_string() << std::endl;
+
                 }
             }
         }
@@ -959,7 +968,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
             //print_debug_message("SS: " + std::to_string(isRegisterSymbolic[cmp_op1_r]) + " " + std::to_string(isRegisterSymbolic[cmp_op2_r]));
             if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
-                print_debug_message("ENTER1");
+                //print_debug_message("ENTER1");
                 // Symbolic
                 z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
                 z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
@@ -1069,7 +1078,7 @@ void ACEE::executeInstruction(const Instruction &instruction)
             // yummm blt sandwich
             if (isRegisterSymbolic[cmp_op1_r] || isRegisterSymbolic[cmp_op2_r])
             {
-                // Symbolic
+                //std::cout << "FUCK" << isRegisterSymbolic[cmp_op1_r] << isRegisterSymbolic[cmp_op2_r];
                 z3::expr cond_l = (isRegisterSymbolic[cmp_op1_r]) ? symbolicRegisters[cmp_op1_r] : ctx.int_val(registers[cmp_op1_r]);
                 z3::expr cond_r = (isRegisterSymbolic[cmp_op2_r]) ? symbolicRegisters[cmp_op2_r] : ctx.int_val(registers[cmp_op2_r]);
                 z3::expr cond = cond_l < cond_r;
@@ -1265,10 +1274,10 @@ void ACEE::executeInstruction(const Instruction &instruction)
         int32_t op2 = evaluateOperand(instruction.operands[1]);
 
         cmp_op1 = op1;
-        cmp_op1_r = getRegisterNumber(instruction.operands[0].getString());
+        cmp_op1_r = (instruction.operands[0].getString()[0] == '#') ? -1 : getRegisterNumber(instruction.operands[0].getString());
         // print_message("CMP_OP1_R = <" + std::to_string(cmp_op1_r) + ">");
         cmp_op2 = op2;
-        cmp_op2_r = getRegisterNumber(instruction.operands[1].getString());
+        cmp_op2_r = (instruction.operands[1].getString()[0] == '#') ? -1 : getRegisterNumber(instruction.operands[1].getString());
         // print_message("CMP_OP2_R = <" + std::to_string(cmp_op2_r) + ">");
 
         cmp_valid = 1;
